@@ -8,7 +8,7 @@ class SpecialtyAdmin(admin.ModelAdmin):
 
 @admin.register(Doctor)
 class DoctorAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'specialty', 'consultation_fee')
+    list_display = ('full_name', 'specialty')
     list_filter = ('specialty',)
 
 admin.site.register(Patient)

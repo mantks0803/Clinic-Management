@@ -61,7 +61,7 @@ class Doctor(models.Model):
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='doctors', verbose_name="Chuyên khoa")
     full_name = models.CharField(max_length=150, verbose_name="Họ và tên")
     phone = models.CharField(max_length=15, blank=True, verbose_name="Số điện thoại")
-    consultation_fee = models.DecimalField(max_digits=12, decimal_places=2, default=100000, verbose_name="Phí khám")
+    #consultation_fee = models.DecimalField(max_digits=12, decimal_places=2, default=100000, verbose_name="Phí khám")
     years_of_experience = models.PositiveIntegerField(default=0, verbose_name="Số năm kinh nghiệm")
 
     class Meta:
