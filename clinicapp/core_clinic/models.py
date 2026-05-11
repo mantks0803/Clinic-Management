@@ -19,7 +19,6 @@ class User(AbstractUser):
 
 
 class Specialty(models.Model):
-    """Chuyên khoa (VD: Nội, Ngoại, Nhi)"""
     name = models.CharField(max_length=100, unique=True, verbose_name="Tên chuyên khoa")
     description = models.TextField(blank=True, null=True, verbose_name="Mô tả")
     image = models.ImageField(upload_to='specialties/', null=True, blank=True, verbose_name="Ảnh đại diện")
@@ -33,7 +32,6 @@ class Specialty(models.Model):
 
 
 class Patient(models.Model):
-    """Hồ sơ bệnh nhân (mở rộng từ User)"""
     GENDER_CHOICES = (
         ('MALE', 'Nam'),
         ('FEMALE', 'Nữ'),
@@ -56,7 +54,6 @@ class Patient(models.Model):
 
 
 class Doctor(models.Model):
-    """Hồ sơ bác sĩ (mở rộng từ User)"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor', verbose_name="Tài khoản")
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='doctors', verbose_name="Chuyên khoa")
     full_name = models.CharField(max_length=150, verbose_name="Họ và tên")
@@ -73,7 +70,6 @@ class Doctor(models.Model):
 
 
 class Appointment(models.Model):
-    """Lịch hẹn khám bệnh"""
     STATUS_CHOICES = (
         ('PENDING', 'Chờ xác nhận'),
         ('CONFIRMED', 'Đã xác nhận'),
@@ -98,7 +94,6 @@ class Appointment(models.Model):
 
 
 class MedicalRecord(models.Model):
-    """Hồ sơ bệnh án (kết quả 1 lần khám)"""
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='medical_record', verbose_name="Lịch hẹn")
     symptoms = models.TextField(blank=True, null=True, verbose_name="Triệu chứng")
     diagnosis = models.TextField(blank=True, null=True, verbose_name="Chẩn đoán")
@@ -114,7 +109,6 @@ class MedicalRecord(models.Model):
 
 
 class MedicalService(models.Model):
-    """Danh mục dịch vụ cận lâm sàng (xét nghiệm, X-quang...)"""
     name = models.CharField(max_length=200, verbose_name="Tên dịch vụ")
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Giá")
     description = models.TextField(blank=True, null=True, verbose_name="Mô tả")
@@ -128,7 +122,6 @@ class MedicalService(models.Model):
 
 
 class RecordService(models.Model):
-    """Chỉ định dịch vụ cho bệnh nhân trong 1 bệnh án"""
     STATUS_CHOICES = (
         ('WAITING', 'Chờ kết quả'),
         ('DONE', 'Đã có kết quả'),
@@ -147,7 +140,6 @@ class RecordService(models.Model):
 
 
 class Medicine(models.Model):
-    """Danh mục thuốc (Bách khoa toàn thư về thuốc)"""
     name = models.CharField(max_length=200, unique=True, verbose_name="Tên thuốc")
     unit = models.CharField(max_length=50, help_text="Viên, Hộp, Chai...", verbose_name="Đơn vị")
     description = models.TextField(blank=True, null=True, verbose_name="Mô tả")
