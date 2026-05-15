@@ -1,16 +1,17 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Count
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, permissions, status, filters
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import (
     User, Patient, Specialty, Doctor, Appointment,
-    MedicalRecord, MedicalService, RecordService,
+    MedicalRecord, RecordService,
     Medicine, MedicineBatch, Prescription, PrescriptionDetail, Invoice
 )
-
 from .serializers import (
     UserSerializer, PatientSerializer, SpecialtySerializer, DoctorSerializer,
     AppointmentSerializer, MedicalRecordSerializer, RecordServiceSerializer,
@@ -28,6 +29,13 @@ class UserViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        if user.role == 'PATIENT':
+            Patient.objects.create(
+                user=user,
+                full_name=f"{user.first_name} {user.last_name}".strip() or user.username
+            )
 
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
@@ -45,11 +53,16 @@ class DoctorViewSet(viewsets.ModelViewSet):
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
     permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_fields = ['specialty']
+    search_fields = ['full_name']
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filter_fields = ['status', 'appointment_date', 'patient', 'doctor']
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -83,6 +96,8 @@ class MedicineViewSet(viewsets.ModelViewSet):
     queryset = Medicine.objects.all()
     serializer_class = MedicineSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
 
 
 class MedicineBatchViewSet(viewsets.ModelViewSet):
@@ -129,7 +144,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         if invoice.status == 'PAID':
             return Response({"detail": "Hóa đơn này đã được thanh toán rồi!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        doc_fee = 300000
+        doc_fee = 300000  # fixed?
 
         services_total = RecordService.objects.filter(record__appointment=appointment).aggregate(
             total=Sum(F('service__price'))
@@ -147,3 +162,23 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             "detail": "Thanh toán thành công!",
             "total_amount": invoice.total_amount
         }, status=status.HTTP_200_OK)
+
+
+class ClinicStatisticsView(APIView):
+    permission_classes = [permissions.AllowAny]  # nhớ đổi lại
+
+    def get(self, request):
+        total_revenue = Invoice.objects.filter(status='PAID').aggregate(
+            total=Sum('total_amount')
+        )['total'] or 0
+
+        patients_by_specialty = Appointment.objects.values(
+            'doctor__specialty__name'
+        ).annotate(
+            total_patients=Count('patient', distinct=True)
+        )
+
+        return Response({
+            "doanh_thu_tong": total_revenue,
+            "benh_nhan_theo_khoa": patients_by_specialty
+        })
