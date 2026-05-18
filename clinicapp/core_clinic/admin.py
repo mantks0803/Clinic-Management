@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Specialty, Doctor, Patient, Appointment, MedicalRecord, MedicalService, RecordService, Medicine, MedicineBatch, Prescription, PrescriptionDetail, Invoice
+from django.contrib.auth.admin import UserAdmin
+from .models import User, Doctor, Patient, Appointment, MedicalRecord, MedicalService, RecordService, Medicine, \
+    MedicineBatch, Prescription, PrescriptionDetail, Invoice, Specialty
+
+class MyUserAdmin(UserAdmin):
+    fieldsets = UserAdmin.fieldsets + (
+        ('Extra Info', {'fields': ('role', 'avatar')}),
+    )
 
 @admin.register(Specialty)
 class SpecialtyAdmin(admin.ModelAdmin):
@@ -11,6 +18,7 @@ class DoctorAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'specialty')
     list_filter = ('specialty',)
 
+admin.site.register(User, MyUserAdmin)
 admin.site.register(Patient)
 admin.site.register(Appointment)
 admin.site.register(MedicalRecord)

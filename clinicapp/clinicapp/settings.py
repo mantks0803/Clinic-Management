@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'core_clinic',
     'django_filters',
     'cloudinary_storage',
-    'django.contrib.staticfiles',
     'cloudinary',
 ]
 
