@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Home from '../screens/Home';
 import Appointment from '../screens/Appointment';
 import Profile from '../screens/Profile';
-
+import HomeStack from './HomeStack';
 const Tab = createBottomTabNavigator();
 
 const BottomTab = () => {
@@ -28,7 +28,7 @@ const BottomTab = () => {
                 tabBarInactiveTintColor: 'gray',
             })}
         >
-            <Tab.Screen name="Home" component={Home} options={{ title: 'Trang chủ' }} />
+            <Tab.Screen name="Home" component={HomeStack} options={{ title: 'Trang chủ' }} />
             <Tab.Screen name="Appointment" component={Appointment} options={{ title: 'Lịch hẹn' }} />
             <Tab.Screen name="Profile" component={Profile} options={{ title: ' Hồ sơ cá nhân' }} />
         </Tab.Navigator>

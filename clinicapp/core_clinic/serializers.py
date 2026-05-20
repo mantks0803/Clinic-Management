@@ -5,27 +5,74 @@ from .models import (
     Medicine, MedicineBatch, Prescription, PrescriptionDetail, Invoice
 )
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'password', 'first_name', 'last_name', 'email', 'role']
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        user = User(**validated_data)
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
 
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
         fields = '__all__'
 
+
+class UserSerializer(serializers.ModelSerializer):
+    patient = PatientSerializer(read_only=True)
+    dob = serializers.DateField(write_only=True, required=False, allow_null=True)
+    gender = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    address = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'password', 'first_name', 'last_name', 'email', 'role', 'avatar', 'patient', 'dob',
+                  'gender', 'phone', 'address']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'role': {'required': False}
+        }
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        avatar = validated_data.pop('avatar', None)
+        role = validated_data.get('role', 'PATIENT')
+
+        dob = validated_data.pop('dob', None)
+        gender = validated_data.pop('gender', 'MALE')
+        phone = validated_data.pop('phone', '')
+        address = validated_data.pop('address', '')
+
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=password,
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            email=validated_data.get('email', ''),
+            role=role
+        )
+
+        if avatar:
+            user.avatar = avatar
+            user.save()
+
+        if role == 'PATIENT':
+            full_name = f"{user.last_name} {user.first_name}".strip()
+            if not full_name:
+                full_name = user.username
+
+            Patient.objects.create(
+                user=user,
+                full_name=full_name,
+                dob=dob,
+                gender=gender,
+                phone=phone,
+                address=address
+            )
+
+        return user
+
+
 class SpecialtySerializer(serializers.ModelSerializer):
     class Meta:
         model = Specialty
         fields = ['id', 'name', 'description']
+
 
 class DoctorSerializer(serializers.ModelSerializer):
     specialty_name = serializers.ReadOnlyField(source='specialty.name')
@@ -38,6 +85,7 @@ class DoctorSerializer(serializers.ModelSerializer):
     def get_consultation_fee(self, obj):
         return 300000
 
+
 class AppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.ReadOnlyField(source='patient.full_name')
     doctor_name = serializers.ReadOnlyField(source='doctor.full_name')
@@ -47,10 +95,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['status', 'created_at']
 
+
 class MedicineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Medicine
         fields = '__all__'
+
 
 class MedicineBatchSerializer(serializers.ModelSerializer):
     medicine_name = serializers.ReadOnlyField(source='medicine.name')
@@ -59,12 +109,14 @@ class MedicineBatchSerializer(serializers.ModelSerializer):
         model = MedicineBatch
         fields = '__all__'
 
+
 class RecordServiceSerializer(serializers.ModelSerializer):
     service_name = serializers.ReadOnlyField(source='service.name')
 
     class Meta:
         model = RecordService
         fields = '__all__'
+
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
     services = RecordServiceSerializer(many=True, read_only=True)
@@ -73,6 +125,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
         model = MedicalRecord
         fields = '__all__'
 
+
 class PrescriptionDetailSerializer(serializers.ModelSerializer):
     medicine_name = serializers.ReadOnlyField(source='batch.medicine.name')
 
@@ -80,12 +133,14 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
         model = PrescriptionDetail
         fields = '__all__'
 
+
 class PrescriptionSerializer(serializers.ModelSerializer):
     details = PrescriptionDetailSerializer(many=True, read_only=True)
 
     class Meta:
         model = Prescription
         fields = '__all__'
+
 
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
