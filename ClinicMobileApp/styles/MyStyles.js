@@ -3,13 +3,12 @@ import { StyleSheet } from 'react-native';
 export default StyleSheet.create({
     container: {
         flex: 1,
-        marginTop: 50,
         backgroundColor: '#ffffff',
     },
     subject: {
         fontSize: 25,
         fontWeight: "bold",
-        color: "blue",
+        color: "#004c87", //
         textAlign: "center",
         marginBottom: 20
     },
@@ -25,5 +24,13 @@ export default StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40
+    },
+    center: {
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    textBlue: {
+        color: 'blue',
+        fontSize: 16
     }
 });

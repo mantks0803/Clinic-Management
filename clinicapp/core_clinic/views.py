@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Sum, F, Count
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, permissions, status, filters
+from rest_framework import viewsets, permissions, status, filters, serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -36,6 +36,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 user=user,
                 full_name=f"{user.first_name} {user.last_name}".strip() or user.username
             )
+
+    @action(methods=['get'], detail=False, url_path='current-user', permission_classes=[permissions.IsAuthenticated])
+    def get_current_user(self, request):
+        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
 
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
