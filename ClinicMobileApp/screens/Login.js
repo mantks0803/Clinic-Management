@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API, { endpoints } from '../configs/API';
+import API, { endpoints, authApi } from '../configs/API';
 import MyStyles from '../styles/MyStyles';
+import { MyDispatchContext } from '../contexts/MyUserContext';
 
 const Login = ({ navigation }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const dispatch = useContext(MyDispatchContext);
 
     const handleLogin = async () => {
         if (!username || !password) {
@@ -17,23 +19,29 @@ const Login = ({ navigation }) => {
         }
 
         setLoading(true);
-        
+
         try {
             let form = new FormData();
             form.append("username", username);
             form.append("password", password);
-            form.append("client_id", "GnrqA2ozeDH6WbBPXfUMC1YzfD5gkbrMqCDpZvKc"); 
-            form.append("client_secret", "OtXQ5acgA4zjiakcQ031TeX323jtDbJU9OId030F2IP7wEfhRBjC5Nh3ebQDff74SZ6N7n96x0N8daXkFHcSSC7akyjuGaUomquMBc23YkAQlgfHYH3wQdDk12azcOPC");
+            form.append("client_id", "qWAEIANBBVyJlSuAfKe5RpymQEXrRe6vqKkkHziC");
+            form.append("client_secret", "Dj2Z0Ha3I0rN7ryjXlrT8p1PL1LVqUpyO5r2HZluRqaGj2TB9FfdYn6j0yPWLsJdFS5TcFiZ2QlZyuS2jhlA7bDRTZp3VxJxERmMCO0LbTgJMD4pWpblnEmJR5Jz4JaA");
             form.append("grant_type", "password");
 
             let res = await API.post(endpoints['login'], form, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             await AsyncStorage.setItem("access_token", res.data.access_token);
-            Alert.alert("Thành công", "Đăng nhập thành công! Đã có Token.");
+
+            let user = await authApi(res.data.access_token).get(endpoints['current-user']);
+
+            dispatch({
+                "type": "login",
+                "payload": user.data
+            });
+
+            Alert.alert("Thành công", "Đăng nhập thành công!");
 
         } catch (ex) {
             console.error(ex);
@@ -57,7 +65,7 @@ const Login = ({ navigation }) => {
             />
 
             <TextInput
-                label="Mật khẩu"
+                label="Tên đăng nhập"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={true}

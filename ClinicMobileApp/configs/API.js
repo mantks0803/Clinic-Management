@@ -15,3 +15,8 @@ export const endpoints = {
 export default axios.create({
     baseURL: HOST
 });
+
+export const authApi = (token) => axios.create({
+    baseURL: HOST,
+    headers: { 'Authorization': `Bearer ${token}` }
+});
