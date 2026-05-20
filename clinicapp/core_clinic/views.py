@@ -30,12 +30,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        if user.role == 'PATIENT':
-            Patient.objects.create(
-                user=user,
-                full_name=f"{user.first_name} {user.last_name}".strip() or user.username
-            )
+        serializer.save()
 
     @action(methods=['get'], detail=False, url_path='current-user', permission_classes=[permissions.IsAuthenticated])
     def get_current_user(self, request):
@@ -149,7 +144,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         if invoice.status == 'PAID':
             return Response({"detail": "Hóa đơn này đã được thanh toán rồi!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        doc_fee = 300000  # fixed?
+        doc_fee = 300000
 
         services_total = RecordService.objects.filter(record__appointment=appointment).aggregate(
             total=Sum(F('service__price'))
@@ -170,7 +165,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
 
 class ClinicStatisticsView(APIView):
-    permission_classes = [permissions.AllowAny]  # nhớ đổi lại
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         total_revenue = Invoice.objects.filter(status='PAID').aggregate(

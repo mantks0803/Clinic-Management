@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import { View, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { List } from 'react-native-paper';
 import API, { endpoints } from '../configs/API';
 import MyStyles from '../styles/MyStyles';
@@ -30,11 +30,15 @@ const Home = () => {
                 <FlatList 
                     data={doctors}
                     keyExtractor={item => item.id.toString()}
+                    refreshControl={
+                        <RefreshControl refreshing={loading} onRefresh={loadDoctors} />
+                    }
                     renderItem={({ item }) => (
                         <List.Item
                             title={item.full_name}
-                            description={item.specialty.name}
+                            description={item.specialty?.name || "Chưa cập nhật chuyên khoa"}
                             left={() => <List.Icon icon="doctor" />}
+                            onPress={() => console.log("Bấm vào bác sĩ:", item.id)} // Tạm thời để log, mai mình làm link qua trang đặt lịch
                         />
                     )}
                 />

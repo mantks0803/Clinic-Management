@@ -148,4 +148,11 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': 'njWCbL0HBD6EV7Az_GKeVMCIM9c',
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
