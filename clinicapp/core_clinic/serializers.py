@@ -1,9 +1,25 @@
 from rest_framework import serializers
 from .models import (
     User, Specialty, Doctor, Patient, Appointment,
-    MedicalRecord, MedicalService, RecordService,
-    Medicine, MedicineBatch, Prescription, PrescriptionDetail, Invoice
+    MedicalRecord, RecordService, Medicine, MedicineBatch,
+    Prescription, PrescriptionDetail, Invoice
 )
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if hasattr(instance, 'image') and instance.image:
+            data['image'] = instance.image.url
+        if hasattr(instance, 'avatar') and instance.avatar:
+            data['avatar'] = instance.avatar.url
+        return data
+
+
+class SpecialtySerializer(ItemSerializer):
+    class Meta:
+        model = Specialty
+        fields = ['id', 'name', 'description', 'image']
 
 
 class PatientSerializer(serializers.ModelSerializer):
@@ -28,11 +44,16 @@ class UserSerializer(serializers.ModelSerializer):
             'role': {'required': False}
         }
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.avatar:
+            data['avatar'] = instance.avatar.url
+        return data
+
     def create(self, validated_data):
         password = validated_data.pop('password')
         avatar = validated_data.pop('avatar', None)
         role = validated_data.get('role', 'PATIENT')
-
         dob = validated_data.pop('dob', None)
         gender = validated_data.pop('gender', 'MALE')
         phone = validated_data.pop('phone', '')
@@ -68,12 +89,6 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class SpecialtySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Specialty
-        fields = ['id', 'name', 'description']
-
-
 class DoctorSerializer(serializers.ModelSerializer):
     specialty_name = serializers.ReadOnlyField(source='specialty.name')
     consultation_fee = serializers.SerializerMethodField()
@@ -84,6 +99,7 @@ class DoctorSerializer(serializers.ModelSerializer):
 
     def get_consultation_fee(self, obj):
         return 300000
+
 
 class AppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.ReadOnlyField(source='patient.full_name')
