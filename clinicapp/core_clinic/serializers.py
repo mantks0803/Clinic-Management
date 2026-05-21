@@ -80,11 +80,10 @@ class DoctorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Doctor
-        fields = ['id', 'full_name', 'specialty', 'specialty_name', 'consultation_fee']
+        fields = ['id', 'full_name', 'specialty', 'specialty_name', 'consultation_fee', 'phone']
 
     def get_consultation_fee(self, obj):
         return 300000
-
 
 class AppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.ReadOnlyField(source='patient.full_name')

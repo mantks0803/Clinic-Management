@@ -53,10 +53,15 @@ class DoctorViewSet(viewsets.ModelViewSet):
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filter_fields = ['specialty']
+    filter_backends = [filters.SearchFilter]
     search_fields = ['full_name']
 
+    def get_queryset(self):
+        queryset = Doctor.objects.all()
+        specialty_id = self.request.query_params.get('specialty_id')
+        if specialty_id:
+            queryset = queryset.filter(specialty_id=specialty_id)
+        return queryset
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
