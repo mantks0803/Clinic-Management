@@ -136,4 +136,4 @@ const styles = StyleSheet.create({
     radioItem: { flexDirection: 'row', alignItems: 'center', marginRight: 20 }
 });
 
-export default Register;r
+export default Register;
