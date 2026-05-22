@@ -2,9 +2,13 @@ from rest_framework import serializers
 from .models import (
     User, Specialty, Doctor, Patient, Appointment,
     MedicalRecord, RecordService, Medicine, MedicineBatch,
-    Prescription, PrescriptionDetail, Invoice
+    Prescription, PrescriptionDetail, Invoice, MedicalService
 )
 
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalService
+        fields = '__all__'
 
 class ItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
@@ -15,18 +19,15 @@ class ItemSerializer(serializers.ModelSerializer):
             data['avatar'] = instance.avatar.url
         return data
 
-
 class SpecialtySerializer(ItemSerializer):
     class Meta:
         model = Specialty
         fields = ['id', 'name', 'description', 'image']
 
-
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
         fields = '__all__'
-
 
 class UserSerializer(serializers.ModelSerializer):
     patient = PatientSerializer(read_only=True)
@@ -37,8 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'first_name', 'last_name', 'email', 'role', 'avatar', 'patient', 'dob',
-                  'gender', 'phone', 'address']
+        fields = ['id', 'username', 'password', 'first_name', 'last_name', 'email', 'role', 'avatar', 'patient', 'dob', 'gender', 'phone', 'address']
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'required': False}
@@ -88,7 +88,6 @@ class UserSerializer(serializers.ModelSerializer):
 
         return user
 
-
 class DoctorSerializer(serializers.ModelSerializer):
     specialty_name = serializers.ReadOnlyField(source='specialty.name')
     consultation_fee = serializers.SerializerMethodField()
@@ -100,7 +99,6 @@ class DoctorSerializer(serializers.ModelSerializer):
     def get_consultation_fee(self, obj):
         return 300000
 
-
 class AppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.ReadOnlyField(source='patient.full_name')
     doctor_name = serializers.ReadOnlyField(source='doctor.full_name')
@@ -110,12 +108,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['status', 'created_at']
 
-
 class MedicineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Medicine
         fields = '__all__'
-
 
 class MedicineBatchSerializer(serializers.ModelSerializer):
     medicine_name = serializers.ReadOnlyField(source='medicine.name')
@@ -124,14 +120,12 @@ class MedicineBatchSerializer(serializers.ModelSerializer):
         model = MedicineBatch
         fields = '__all__'
 
-
 class RecordServiceSerializer(serializers.ModelSerializer):
     service_name = serializers.ReadOnlyField(source='service.name')
 
     class Meta:
         model = RecordService
         fields = '__all__'
-
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
     services = RecordServiceSerializer(many=True, read_only=True)
@@ -140,7 +134,6 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
         model = MedicalRecord
         fields = '__all__'
 
-
 class PrescriptionDetailSerializer(serializers.ModelSerializer):
     medicine_name = serializers.ReadOnlyField(source='batch.medicine.name')
 
@@ -148,14 +141,12 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
         model = PrescriptionDetail
         fields = '__all__'
 
-
 class PrescriptionSerializer(serializers.ModelSerializer):
     details = PrescriptionDetailSerializer(many=True, read_only=True)
 
     class Meta:
         model = Prescription
         fields = '__all__'
-
 
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:

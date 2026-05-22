@@ -193,7 +193,6 @@ class PrescriptionDetail(models.Model):
     def __str__(self):
         return f"{self.prescription} - {self.batch.medicine.name} x {self.quantity}"
 
-
 class Invoice(models.Model):
     PAYMENT_CHOICES = (
         ('CASH', 'Tiền mặt'),

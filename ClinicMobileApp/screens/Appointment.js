@@ -6,7 +6,7 @@ import { MyUserContext } from '../contexts/MyUserContext';
 import API, { endpoints, authApi } from '../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Appointment = () => {
+const Appointment = ({ navigation }) => {
     const user = useContext(MyUserContext);
     const [appointments, setAppointments] = useState([]);
     const [filteredAppointments, setFilteredAppointments] = useState([]);
@@ -116,6 +116,22 @@ const Appointment = () => {
                                         <View style={styles.actionRow}>
                                             <Button mode="contained" onPress={() => handleAction(item.id, 'CONFIRM')} style={[styles.btnAction, {backgroundColor: '#2e7d32'}]}>DUYỆT</Button>
                                             <Button mode="outlined" onPress={() => handleAction(item.id, 'REJECT')} textColor="#d32f2f" style={styles.btnAction}>TỪ CHỐI</Button>
+                                        </View>
+                                    )}
+
+                                    {isDoctor && item.status === 'CONFIRMED' && (
+                                        <View style={styles.actionRow}>
+                                            <Button 
+                                                mode="contained" 
+                                                icon="stethoscope"
+                                                onPress={() => navigation.navigate('Trang chủ Stack', {
+                                                    screen: 'MedicalExamination',
+                                                    params: { appointmentId: item.id, patientName: item.patient_name }
+                                                })} 
+                                                style={[styles.btnAction, {flex: 1, backgroundColor: '#005b9f'}]}
+                                            >
+                                                BẮT ĐẦU KHÁM BỆNH
+                                            </Button>
                                         </View>
                                     )}
                                 </Card.Content>
