@@ -1,9 +1,9 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import PatientHome from '../screens/PatientHome';
-import DoctorList from '../screens/DoctorList';
-import BookAppointment from '../screens/BookAppointment';
-import MedicalExamination from '../screens/MedicalExamination';
+import PatientHome from '../screens/Patient/PatientHome';
+import DoctorList from '../screens/Patient/DoctorList';
+import BookAppointment from '../screens/Patient/BookAppointment';
+import MedicalExamination from '../screens/Doctor/MedicalExamination';
 
 const Stack = createStackNavigator();
 

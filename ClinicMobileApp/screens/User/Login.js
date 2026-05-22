@@ -2,9 +2,9 @@ import React, { useState, useContext } from 'react';
 import { View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API, { endpoints, authApi } from '../configs/API';
-import MyStyles from '../styles/MyStyles';
-import { MyDispatchContext } from '../contexts/MyUserContext';
+import API, { endpoints, authApi } from '../../configs/API';
+import MyStyles from '../../styles/MyStyles';
+import { MyDispatchContext } from '../../contexts/MyUserContext';
 
 const Login = ({ navigation }) => {
     const [username, setUsername] = useState('');
@@ -24,8 +24,8 @@ const Login = ({ navigation }) => {
             let form = new FormData();
             form.append("username", username);
             form.append("password", password);
-            form.append("client_id", "qWAEIANBBVyJlSuAfKe5RpymQEXrRe6vqKkkHziC");
-            form.append("client_secret", "Dj2Z0Ha3I0rN7ryjXlrT8p1PL1LVqUpyO5r2HZluRqaGj2TB9FfdYn6j0yPWLsJdFS5TcFiZ2QlZyuS2jhlA7bDRTZp3VxJxERmMCO0LbTgJMD4pWpblnEmJR5Jz4JaA");
+            form.append("client_id", "5nBXaGWuZgRX3n9MJ8voYuoMZbR8ubLHSCkE6Io9");
+            form.append("client_secret", "DMfEEo8MGOk7M8Nom1RXWiIx9YuLzxcEa8UxVuM4W9Qkxba7D1C3liNOut1HLKeFGghjnTRWR4wif10IP5TW20c1BEiphw2EC4rMC9Qgds1zOYhSsLTcT4wkAD6igO8t");
             form.append("grant_type", "password");
 
             let res = await API.post(endpoints['login'], form, {

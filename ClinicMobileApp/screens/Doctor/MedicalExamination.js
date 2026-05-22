@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { TextInput, Button, Checkbox, Divider } from 'react-native-paper';
-import API, { endpoints, authApi } from '../configs/API';
+import API, { endpoints, authApi } from '../../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MedicalExamination = ({ route, navigation }) => {

@@ -3,8 +3,8 @@ import { View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity, Ima
 import { TextInput, Button, Avatar, RadioButton } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import API, { endpoints } from '../configs/API';
-import MyStyles from '../styles/MyStyles';
+import API, { endpoints } from '../../configs/API';
+import MyStyles from '../../styles/MyStyles';
 
 const Register = ({ navigation }) => {
     const [username, setUsername] = useState('');

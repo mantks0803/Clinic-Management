@@ -2,8 +2,8 @@ import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { MyUserContext } from '../contexts/MyUserContext';
-import API, { endpoints, authApi } from '../configs/API';
+import { MyUserContext } from '../../contexts/MyUserContext';
+import API, { endpoints, authApi } from '../../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BookAppointment = ({ route, navigation }) => {

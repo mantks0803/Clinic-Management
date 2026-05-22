@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { List, ActivityIndicator, Avatar } from 'react-native-paper';
-import API, { endpoints } from '../configs/API';
+import API, { endpoints } from '../../configs/API';
 
 const DoctorList = ({ route, navigation }) => {
     const { specialtyId } = route.params; 

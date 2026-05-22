@@ -6,8 +6,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import AppProvider from './components/AppProvider';
 import { MyUserContext } from './contexts/MyUserContext';
-import Login from './screens/Login';
-import Register from './screens/Register';
+import Login from './screens/User/Login';
+import Register from './screens/User/Register';
 import BottomTab from './navigations/BottomTab';
 
 const Stack = createStackNavigator();
