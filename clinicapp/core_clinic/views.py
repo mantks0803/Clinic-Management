@@ -10,13 +10,14 @@ from rest_framework.views import APIView
 from .models import (
     User, Patient, Specialty, Doctor, Appointment,
     MedicalRecord, RecordService, Medicine, MedicineBatch,
-    Prescription, PrescriptionDetail, Invoice
+    Prescription, PrescriptionDetail, Invoice, MedicalService
 )
 from .serializers import (
     UserSerializer, PatientSerializer, SpecialtySerializer, DoctorSerializer,
     AppointmentSerializer, MedicalRecordSerializer, RecordServiceSerializer,
     MedicineSerializer, MedicineBatchSerializer,
-    PrescriptionSerializer, PrescriptionDetailSerializer, InvoiceSerializer
+    PrescriptionSerializer, PrescriptionDetailSerializer, InvoiceSerializer,
+    ServiceSerializer
 )
 
 
@@ -69,7 +70,7 @@ class DoctorViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPI
 
 
 class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.RetrieveAPIView):
-    queryset = Appointment.objects.all()
+    queryset = Appointment.objects.all().order_by('-id')
     serializer_class = AppointmentSerializer
     filter_backends = [DjangoFilterBackend]
     filter_fields = ['status', 'appointment_date', 'patient', 'doctor']
@@ -93,25 +94,87 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         appointment = self.get_object()
         if appointment.status != 'PENDING':
             return Response({"detail": "Chỉ có thể từ chối lịch đang chờ!"}, status=status.HTTP_400_BAD_REQUEST)
-
         appointment.status = 'CANCELLED'
         appointment.save()
         return Response({"detail": "Đã từ chối lịch hẹn thành công!"}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='examine')
+    @transaction.atomic
+    def examine_appointment(self, request, pk=None):
+        appointment = self.get_object()
+        if appointment.status != 'CONFIRMED':
+            return Response({"detail": "Lịch hẹn phải ở trạng thái Đã duyệt mới có thể khám!"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        diagnosis = request.data.get('diagnosis')
+        advice = request.data.get('advice', '')
+        services = request.data.get('services', [])
+        medicines = request.data.get('medicines', [])
+
+        if not diagnosis:
+            return Response({"detail": "Chẩn đoán bệnh không được để trống!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        record = MedicalRecord.objects.create(
+            appointment=appointment,
+            diagnosis=diagnosis,
+            notes=advice
+        )
+
+        for svc_id in services:
+            RecordService.objects.create(record=record, service_id=svc_id)
+
+        if medicines:
+            prescription = Prescription.objects.create(record=record)
+            for med in medicines:
+                batch = MedicineBatch.objects.get(pk=med['batch_id'])
+                qty = int(med['quantity'])
+                if batch.quantity < qty:
+                    raise ValidationError(
+                        f"Lô thuốc {batch.batch_number} chỉ còn {batch.quantity} đơn vị, không đủ kê đơn!")
+
+                batch.quantity -= qty
+                batch.save()
+
+                PrescriptionDetail.objects.create(
+                    prescription=prescription,
+                    batch=batch,
+                    quantity=qty,
+                    dosage_instruction=med.get('instruction', '')
+                )
+
+        Invoice.objects.create(
+            appointment=appointment,
+            patient=appointment.patient,
+            total_amount=300000,
+            status='UNPAID'
+        )
+
+        appointment.status = 'COMPLETED'
+        appointment.save()
+
+        return Response({"detail": "Lập hồ sơ khám bệnh và kê đơn thành công!"}, status=status.HTTP_201_CREATED)
+
+
+class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+    queryset = MedicalService.objects.all().order_by('-id')
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
 class MedicalRecordViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = MedicalRecord.objects.all()
+    queryset = MedicalRecord.objects.all().order_by('-id')
     serializer_class = MedicalRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class RecordServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = RecordService.objects.all()
+    queryset = RecordService.objects.all().order_by('-id')
     serializer_class = RecordServiceSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class MedicineViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = Medicine.objects.all()
+    queryset = Medicine.objects.all().order_by('-id')
     serializer_class = MedicineSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [filters.SearchFilter]
@@ -119,19 +182,19 @@ class MedicineViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
 
 
 class MedicineBatchViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = MedicineBatch.objects.all()
+    queryset = MedicineBatch.objects.all().order_by('-id')
     serializer_class = MedicineBatchSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class PrescriptionViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = Prescription.objects.all()
+    queryset = Prescription.objects.all().order_by('-id')
     serializer_class = PrescriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class PrescriptionDetailViewSet(viewsets.ViewSet, generics.CreateAPIView):
-    queryset = PrescriptionDetail.objects.all()
+    queryset = PrescriptionDetail.objects.all().order_by('-id')
     serializer_class = PrescriptionDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -147,7 +210,7 @@ class PrescriptionDetailViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 
 class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
-    queryset = Invoice.objects.all()
+    queryset = Invoice.objects.all().order_by('-id')
     serializer_class = InvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
 
