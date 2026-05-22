@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, FlatList, ActivityIndicator, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Avatar, Card, IconButton } from 'react-native-paper';
-import API, { endpoints } from '../configs/API';
-import { MyUserContext } from '../contexts/MyUserContext';
+import API, { endpoints } from '../../configs/API';
+import { MyUserContext } from '../../contexts/MyUserContext';
 
 const PatientHome = ({ navigation }) => {
     const user = useContext(MyUserContext);

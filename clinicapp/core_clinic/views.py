@@ -173,15 +173,15 @@ class RecordServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retr
     permission_classes = [permissions.IsAuthenticated]
 
 
-class MedicineViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class MedicineViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Medicine.objects.all().order_by('-id')
     serializer_class = MedicineSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
 
 
-class MedicineBatchViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class MedicineBatchViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = MedicineBatch.objects.all().order_by('-id')
     serializer_class = MedicineBatchSerializer
     permission_classes = [permissions.IsAuthenticated]

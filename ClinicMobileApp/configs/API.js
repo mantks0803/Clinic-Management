@@ -10,6 +10,9 @@ export const endpoints = {
     'appointments': '/api/v1/appointments/',
     'patients': '/api/v1/patients/',
     'register': '/api/v1/users/',
+
+    'medicines': '/api/v1/medicines/',
+    'medicine-batches': '/api/v1/medicine-batches/',
 };
 export default axios.create({
     baseURL: HOST

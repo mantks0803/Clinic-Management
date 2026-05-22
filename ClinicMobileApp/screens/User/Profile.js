@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import MyStyles from '../styles/MyStyles';
+import MyStyles from '../../styles/MyStyles';
 
 const Profile = () => {
     return (
