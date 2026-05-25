@@ -160,7 +160,28 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         try:
             record = MedicalRecord.objects.get(appointment=appointment)
             serializer = MedicalRecordSerializer(record, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+
+            prescriptions_data = []
+            prescriptions = Prescription.objects.filter(record=record)
+            for p in prescriptions:
+                details = PrescriptionDetail.objects.filter(prescription=p)
+                for d in details:
+                    med_name = "Thuốc"
+                    if hasattr(d.batch, 'medicine') and d.batch.medicine:
+                        med_name = d.batch.medicine.name
+                    elif hasattr(d.batch, 'medicine_name'):
+                        med_name = d.batch.medicine_name
+
+                    prescriptions_data.append({
+                        "id": d.id,
+                        "medicine_name": med_name,
+                        "quantity": d.quantity,
+                        "dosage_instruction": d.dosage_instruction
+                    })
+
+            data["prescriptions"] = prescriptions_data
+            return Response(data, status=status.HTTP_200_OK)
         except MedicalRecord.DoesNotExist:
             return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
 
