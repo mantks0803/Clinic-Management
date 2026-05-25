@@ -76,7 +76,7 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
     filter_fields = ['status', 'appointment_date', 'patient', 'doctor']
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'medical_record']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
@@ -153,6 +153,16 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         appointment.save()
 
         return Response({"detail": "Lập hồ sơ khám bệnh và kê đơn thành công!"}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='medical-record')
+    def medical_record(self, request, pk=None):
+        appointment = self.get_object()
+        try:
+            record = MedicalRecord.objects.get(appointment=appointment)
+            serializer = MedicalRecordSerializer(record, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except MedicalRecord.DoesNotExist:
+            return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):

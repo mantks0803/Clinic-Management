@@ -75,6 +75,7 @@ const Appointment = ({ navigation }) => {
             case 'PENDING': return { label: 'Chờ xử lý', color: '#ff9800' };
             case 'CONFIRMED': return { label: 'Đã duyệt', color: '#2e7d32' };
             case 'CANCELLED': return { label: 'Đã hủy', color: '#d32f2f' };
+            case 'COMPLETED': return { label: 'Hoàn thành', color: '#00796b' };
             default: return { label: status, color: '#6c757d' };
         }
     };
@@ -85,6 +86,7 @@ const Appointment = ({ navigation }) => {
                 <Chip selected={selectedFilter === 'ALL'} onPress={() => applyFilter('ALL')} style={styles.chip}>Tất cả</Chip>
                 <Chip selected={selectedFilter === 'PENDING'} onPress={() => applyFilter('PENDING')} style={styles.chip}>Đang chờ</Chip>
                 <Chip selected={selectedFilter === 'CONFIRMED'} onPress={() => applyFilter('CONFIRMED')} style={styles.chip}>Đã duyệt</Chip>
+                <Chip selected={selectedFilter === 'COMPLETED'} onPress={() => applyFilter('COMPLETED')} style={styles.chip}>Hoàn thành</Chip>
             </View>
 
             <Text style={styles.headerTitle}>{isDoctor ? "YÊU CẦU ĐẶT LỊCH KHÁM" : "LỊCH HẸN CỦA TÔI"}</Text>
@@ -131,6 +133,20 @@ const Appointment = ({ navigation }) => {
                                                 style={[styles.btnAction, {flex: 1, backgroundColor: '#005b9f'}]}
                                             >
                                                 BẮT ĐẦU KHÁM BỆNH
+                                            </Button>
+                                        </View>
+                                    )}
+
+                                    {item.status === 'COMPLETED' && (
+                                        <View style={styles.actionRow}>
+                                            <Button 
+                                                mode="contained" 
+                                                icon="file-document"
+                                                buttonColor="#005b9f"
+                                                onPress={() => navigation.navigate('MedicalRecordDetail', { appointmentId: item.id })}
+                                                style={{ flex: 1 }}
+                                            >
+                                                XEM BỆNH ÁN & ĐƠN THUỐC
                                             </Button>
                                         </View>
                                     )}

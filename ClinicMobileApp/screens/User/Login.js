@@ -24,8 +24,8 @@ const Login = ({ navigation }) => {
             let form = new FormData();
             form.append("username", username);
             form.append("password", password);
-            form.append("client_id", "5nBXaGWuZgRX3n9MJ8voYuoMZbR8ubLHSCkE6Io9");
-            form.append("client_secret", "DMfEEo8MGOk7M8Nom1RXWiIx9YuLzxcEa8UxVuM4W9Qkxba7D1C3liNOut1HLKeFGghjnTRWR4wif10IP5TW20c1BEiphw2EC4rMC9Qgds1zOYhSsLTcT4wkAD6igO8t");
+            form.append("client_id", "VzvqkjG57zWTprwUPi0CNbw2zONO3MNSroq6ZZfE");
+            form.append("client_secret", "MS8cVeeDZhDaHjqXRK0gIOJb29lGw2DCYKGrKOjhQsyZMbP5rfWi3ZyXlp22QlCpFhZg0iVOCLWK3vHSTtNaJuOMfbP5MRfvmr8SLa9PVOTTwe9ZSeaq3WAcAbq0LKlq");
             form.append("grant_type", "password");
 
             let res = await API.post(endpoints['login'], form, {
@@ -44,6 +44,9 @@ const Login = ({ navigation }) => {
             Alert.alert("Thành công", "Đăng nhập thành công!");
 
         } catch (ex) {
+            if (ex.response) {
+                console.info(ex.response.data);
+            }
             console.error(ex);
             Alert.alert("Lỗi đăng nhập", "Tài khoản hoặc mật khẩu không đúng!");
         } finally {
@@ -65,7 +68,7 @@ const Login = ({ navigation }) => {
             />
 
             <TextInput
-                label="Tên đăng nhập"
+                label="Mật khẩu"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={true}
