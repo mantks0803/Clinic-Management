@@ -9,6 +9,7 @@ import { MyUserContext } from './contexts/MyUserContext';
 import Login from './screens/User/Login';
 import Register from './screens/User/Register';
 import BottomTab from './navigations/BottomTab';
+import MedicalRecordDetail from './screens/Patient/MedicalRecordDetail';
 
 const Stack = createStackNavigator();
 
@@ -24,7 +25,14 @@ const Root = () => {
                         <Stack.Screen name="Register" component={Register} />
                     </>
                 ) : (
-                    <Stack.Screen name="BottomTab" component={BottomTab} />
+                    <>
+                        <Stack.Screen name="BottomTab" component={BottomTab} />
+                        <Stack.Screen 
+                            name="MedicalRecordDetail" 
+                            component={MedicalRecordDetail} 
+                            options={{ headerShown: true, title: "Chi tiết bệnh án & Toa thuốc", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                    </>
                 )}
             </Stack.Navigator>
         </NavigationContainer>
