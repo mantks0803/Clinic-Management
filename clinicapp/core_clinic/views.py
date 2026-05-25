@@ -74,18 +74,25 @@ class DoctorViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPI
 
 
 class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.RetrieveAPIView):
-    queryset = Appointment.objects.all().order_by('-id')
     serializer_class = AppointmentSerializer
     filter_backends = [DjangoFilterBackend]
     filter_fields = ['status', 'appointment_date', 'patient', 'doctor']
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'medical_record']:
-            return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'PATIENT':
+            return Appointment.objects.filter(patient__user=user).order_by('-id')
+        elif user.role == 'DOCTOR':
+            return Appointment.objects.filter(doctor__user=user).order_by('-id')
+        return Appointment.objects.all().order_by('-id')
 
     @action(detail=True, methods=['post'], url_path='confirm')
     def confirm_appointment(self, request, pk=None):
+        if request.user.role != 'DOCTOR':
+            return Response({"detail": "Quyền truy cập bị từ chối!"}, status=status.HTTP_403_FORBIDDEN)
         appointment = self.get_object()
         if appointment.status != 'PENDING':
             return Response({"detail": "Chỉ có thể xác nhận lịch đang chờ!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -95,6 +102,8 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_appointment(self, request, pk=None):
+        if request.user.role != 'DOCTOR':
+            return Response({"detail": "Quyền truy cập bị từ chối!"}, status=status.HTTP_403_FORBIDDEN)
         appointment = self.get_object()
         if appointment.status != 'PENDING':
             return Response({"detail": "Chỉ có thể từ chối lịch đang chờ!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -105,6 +114,8 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
     @action(detail=True, methods=['post'], url_path='examine')
     @transaction.atomic
     def examine_appointment(self, request, pk=None):
+        if request.user.role != 'DOCTOR':
+            return Response({"detail": "Quyền truy cập bị từ chối!"}, status=status.HTTP_403_FORBIDDEN)
         appointment = self.get_object()
         if appointment.status != 'CONFIRMED':
             return Response({"detail": "Lịch hẹn phải ở trạng thái Đã duyệt mới có thể khám!"},
@@ -197,9 +208,16 @@ class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
 
 
 class MedicalRecordViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = MedicalRecord.objects.all().order_by('-id')
     serializer_class = MedicalRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'PATIENT':
+            return MedicalRecord.objects.filter(appointment__patient__user=user).order_by('-id')
+        elif user.role == 'DOCTOR':
+            return MedicalRecord.objects.filter(appointment__doctor__user=user).order_by('-id')
+        return MedicalRecord.objects.all().order_by('-id')
 
 
 class RecordServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
@@ -245,7 +263,6 @@ class PrescriptionDetailViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 
 class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
-    queryset = Invoice.objects.all().order_by('-id')
     serializer_class = InvoiceSerializer
 
     def get_permissions(self):
@@ -257,6 +274,12 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         if self.action in ['by_appointment', 'payos_payment', 'payos_callback']:
             return
         super().perform_authentication(request)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and user.role == 'PATIENT':
+            return Invoice.objects.filter(patient__user=user).order_by('-id')
+        return Invoice.objects.all().order_by('-id')
 
     @action(detail=False, methods=['get'], url_path='by-appointment')
     def by_appointment(self, request):
@@ -306,8 +329,8 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             order_code=unique_order_code,
             amount=invoice.total_amount,
             description=f"Vien phi hdon {invoice.id}",
-            return_url="http://192.168.100.152:8000/api/v1/invoices/payos-callback/",
-            cancel_url="http://192.168.100.152:8000/api/v1/invoices/payos-callback/?status=cancel"
+            return_url="http://192.168.1.5:8000/api/v1/invoices/payos-callback/",
+            cancel_url="http://192.168.1.5:8000/api/v1/invoices/payos-callback/?status=cancel"
         )
 
         if not url:
@@ -331,6 +354,8 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             except Invoice.DoesNotExist:
                 pass
         return HttpResponse("<script>window.location.href='https://payos.vn';</script>")
+
+
 class ClinicStatisticsView(APIView):
     permission_classes = [permissions.AllowAny]
 

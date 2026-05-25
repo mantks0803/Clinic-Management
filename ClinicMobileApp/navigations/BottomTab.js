@@ -5,7 +5,7 @@ import HomeStack from './HomeStack';
 import Appointment from '../screens/Appointment';
 import Profile from '../screens/User/Profile';
 import MedicineInventory from '../screens/Staff/MedicineInventory';
-import StaffStack from './StaffStack'; // Đổi từ ImportMedicine sang StaffStack
+import StaffStack from './StaffStack';
 import { MyUserContext } from '../contexts/MyUserContext';
 
 const Tab = createBottomTabNavigator();
@@ -22,11 +22,18 @@ const TabNavigator = () => {
                         component={MedicineInventory} 
                         options={{ title: 'Kho thuốc', tabBarIcon: ({ color }) => <Icon source="package-variant-closed" size={30} color={color} /> }} 
                     />
-                    {/* Component đổi thành StaffStack và tắt headerShown của Tab đi vì Stack con có header riêng rồi */}
                     <Tab.Screen 
                         name="ImportMedicine" 
                         component={StaffStack} 
                         options={{ title: 'Nhập thuốc', headerShown: false, tabBarIcon: ({ color }) => <Icon source="plus-box" size={30} color={color} /> }} 
+                    />
+                </>
+            ) : user && user.role === 'DOCTOR' ? (
+                <>
+                    <Tab.Screen 
+                        name="Lịch hẹn" 
+                        component={Appointment} 
+                        options={{ title: 'Danh sách ca khám', tabBarIcon: ({ color }) => <Icon source="calendar-check" size={30} color={color} /> }} 
                     />
                 </>
             ) : (
