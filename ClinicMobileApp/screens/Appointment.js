@@ -1,5 +1,5 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { Card, Chip, ActivityIndicator, Badge, Button } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { MyUserContext } from '../contexts/MyUserContext';
@@ -144,9 +144,20 @@ const Appointment = ({ navigation }) => {
                                                 icon="file-document"
                                                 buttonColor="#005b9f"
                                                 onPress={() => navigation.navigate('MedicalRecordDetail', { appointmentId: item.id })}
-                                                style={{ flex: 1 }}
+                                                style={{ flex: 0.48 }}
+                                                labelStyle={{ fontSize: 12 }}
                                             >
-                                                XEM BỆNH ÁN & ĐƠN THUỐC
+                                                BỆNH ÁN
+                                            </Button>
+                                            <Button 
+                                                mode="contained" 
+                                                icon="credit-card"
+                                                buttonColor="#2e7d32"
+                                                onPress={() => navigation.navigate('PaymentScreen', { appointmentId: item.id })}
+                                                style={{ flex: 0.48 }}
+                                                labelStyle={{ fontSize: 12 }}
+                                            >
+                                                THANH TOÁN
                                             </Button>
                                         </View>
                                     )}

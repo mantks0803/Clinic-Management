@@ -10,6 +10,8 @@ import Login from './screens/User/Login';
 import Register from './screens/User/Register';
 import BottomTab from './navigations/BottomTab';
 import MedicalRecordDetail from './screens/Patient/MedicalRecordDetail';
+import PaymentScreen from './screens/Patient/PaymentScreen';
+import PaymentWebView from './screens/Patient/PaymentWebView';
 
 const Stack = createStackNavigator();
 
@@ -31,6 +33,16 @@ const Root = () => {
                             name="MedicalRecordDetail" 
                             component={MedicalRecordDetail} 
                             options={{ headerShown: true, title: "Chi tiết bệnh án & Toa thuốc", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="PaymentScreen" 
+                            component={PaymentScreen} 
+                            options={{ headerShown: true, title: "Hóa đơn viện phí", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="PaymentWebView" 
+                            component={PaymentWebView} 
+                            options={{ headerShown: true, title: "Cổng thanh toán VNPay", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
                         />
                     </>
                 )}
