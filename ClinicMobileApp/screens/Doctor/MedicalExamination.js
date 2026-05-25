@@ -9,10 +9,8 @@ const MedicalExamination = ({ route, navigation }) => {
     const [diagnosis, setDiagnosis] = useState('');
     const [advice, setAdvice] = useState('');
     const [loading, setLoading] = useState(false);
-
     const [allServices, setAllServices] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
-
     const [allBatches, setAllBatches] = useState([]);
     const [prescribedMedicines, setPrescribedMedicines] = useState([]);
 
@@ -27,7 +25,7 @@ const MedicalExamination = ({ route, navigation }) => {
                 setAllServices(srvRes.data.results || srvRes.data || []);
                 setAllBatches(batchRes.data.results || batchRes.data || []);
             } catch (ex) {
-                console.error("Lỗi nạp dữ liệu danh mục:", ex);
+                console.error(ex);
             }
         };
         fetchData();
@@ -83,7 +81,13 @@ const MedicalExamination = ({ route, navigation }) => {
 
             await authApi(token).post(`${endpoints['appointments']}${appointmentId}/examine/`, payload);
             Alert.alert("Thành công", "Đã hoàn thành khám và kê đơn thuốc!", [
-                { text: "OK", onPress: () => navigation.navigate('Trang chủ Stack') }
+                { 
+                    text: "OK", 
+                    onPress: () => {
+                        navigation.goBack();
+                        navigation.navigate('Lịch hẹn');
+                    } 
+                }
             ]);
         } catch (ex) {
             Alert.alert("Thất bại", "Đã xảy ra lỗi hệ thống hoặc kho hết thuốc!");
@@ -142,8 +146,6 @@ const MedicalExamination = ({ route, navigation }) => {
         </ScrollView>
     );
 };
-
-
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },

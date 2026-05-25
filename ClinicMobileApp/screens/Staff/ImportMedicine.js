@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi, endpoints } from '../../configs/API';
 import MyStyles from '../../styles/MyStyles';
 
-// Bổ sung thêm route nhận dữ liệu gửi về
 const ImportMedicine = ({ route, navigation }) => {
     const [selectedMedicine, setSelectedMedicine] = useState('');
     const [batchNumber, setBatchNumber] = useState('');
@@ -17,7 +16,6 @@ const ImportMedicine = ({ route, navigation }) => {
     const [showPicker, setShowPicker] = useState(false);
     const [expirationDate, setExpirationDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // BỘ LẮNG NGHE ĐẶC BIỆT: Tự động hốt ID thuốc gốc mới tinh vừa tạo điền thẳng vào ô TextInput
     useEffect(() => {
         if (route.params?.newMedicineId) {
             setSelectedMedicine(route.params.newMedicineId.toString());
@@ -63,7 +61,6 @@ const ImportMedicine = ({ route, navigation }) => {
             setQuantity('');
             setSellingPrice('');
             
-            // Nhập kho xong nhảy hẳn ra ngoài màn hình chính để load lại tồn kho thuốc
             navigation.navigate('MedicineInventory');
         } catch (ex) {
             if (ex.response) {
@@ -79,7 +76,6 @@ const ImportMedicine = ({ route, navigation }) => {
         <ScrollView style={MyStyles.margin}>
             <Text style={[MyStyles.subject, { marginTop: 15 }]}>LẬP PHIẾU NHẬP KHO</Text>
             
-            {/* Chia đôi hàng ngang: Bên trái nhập ID, bên phải nhấn nút nhảy sang tạo thuốc gốc */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <TextInput
                     label="ID Thuốc gốc"

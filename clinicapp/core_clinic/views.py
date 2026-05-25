@@ -6,6 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from datetime import datetime
+from django.utils import timezone
+from django.http import HttpResponse
 
 from .models import (
     User, Patient, Specialty, Doctor, Appointment,
@@ -19,6 +22,7 @@ from .serializers import (
     PrescriptionSerializer, PrescriptionDetailSerializer, InvoiceSerializer,
     ServiceSerializer
 )
+from .payos_provider import PayOSProvider
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -160,7 +164,28 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         try:
             record = MedicalRecord.objects.get(appointment=appointment)
             serializer = MedicalRecordSerializer(record, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            data = serializer.data
+
+            prescriptions_data = []
+            prescriptions = Prescription.objects.filter(record=record)
+            for p in prescriptions:
+                details = PrescriptionDetail.objects.filter(prescription=p)
+                for d in details:
+                    med_name = "Thuốc"
+                    if hasattr(d.batch, 'medicine') and d.batch.medicine:
+                        med_name = d.batch.medicine.name
+                    elif hasattr(d.batch, 'medicine_name'):
+                        med_name = d.batch.medicine_name
+
+                    prescriptions_data.append({
+                        "id": d.id,
+                        "medicine_name": med_name,
+                        "quantity": d.quantity,
+                        "dosage_instruction": d.dosage_instruction
+                    })
+
+            data["prescriptions"] = prescriptions_data
+            return Response(data, status=status.HTTP_200_OK)
         except MedicalRecord.DoesNotExist:
             return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -222,33 +247,90 @@ class PrescriptionDetailViewSet(viewsets.ViewSet, generics.CreateAPIView):
 class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     queryset = Invoice.objects.all().order_by('-id')
     serializer_class = InvoiceSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
-    @action(detail=True, methods=['post'], url_path='payment')
-    @transaction.atomic
-    def payment(self, request, pk=None):
+    def get_permissions(self):
+        if self.action in ['by_appointment', 'payos_payment', 'payos_callback']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_authentication(self, request):
+        if self.action in ['by_appointment', 'payos_payment', 'payos_callback']:
+            return
+        super().perform_authentication(request)
+
+    @action(detail=False, methods=['get'], url_path='by-appointment')
+    def by_appointment(self, request):
+        app_id = request.query_params.get('appointment_id')
+        try:
+            invoice = Invoice.objects.get(appointment_id=app_id)
+            appointment = invoice.appointment
+
+            doc_fee = 300000
+            services_total = RecordService.objects.filter(record__appointment=appointment).aggregate(
+                total=Sum(F('service__price'))
+            )['total'] or 0
+            medicine_total = PrescriptionDetail.objects.filter(prescription__record__appointment=appointment).aggregate(
+                total=Sum(F('quantity') * F('batch__selling_price'))
+            )['total'] or 0
+
+            invoice.total_amount = doc_fee + services_total + medicine_total
+            invoice.save()
+
+            return Response({
+                "id": invoice.id,
+                "status": invoice.status,
+                "doc_fee": doc_fee,
+                "services_total": services_total,
+                "medicine_total": medicine_total,
+                "total_amount": invoice.total_amount
+            }, status=status.HTTP_200_OK)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Không tìm thấy hóa đơn cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], url_path='payos-payment')
+    def payos_payment(self, request, pk=None):
         invoice = self.get_object()
-        appointment = invoice.appointment
         if invoice.status == 'PAID':
-            return Response({"detail": "Hóa đơn này đã được thanh toán rồi!"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Hóa đơn này đã được thanh toán!"}, status=status.HTTP_400_BAD_REQUEST)
 
-        doc_fee = 300000
-        services_total = RecordService.objects.filter(record__appointment=appointment).aggregate(
-            total=Sum(F('service__price'))
-        )['total'] or 0
-        medicine_total = PrescriptionDetail.objects.filter(prescription__record__appointment=appointment).aggregate(
-            total=Sum(F('quantity') * F('batch__selling_price'))
-        )['total'] or 0
+        provider = PayOSProvider(
+            client_id="6034e4ba-0f39-486f-a024-e09f8768fc16",
+            api_key="c2feb503-3f0d-4be7-afbe-25e852fb3741",
+            checksum_key="17baf3da7ae973ddc2fab1864374c800869108488e1e835fd818a55c5d0f96d2"
+        )
 
-        invoice.total_amount = doc_fee + services_total + medicine_total
-        invoice.status = 'PAID'
-        invoice.save()
-        return Response({
-            "detail": "Thanh toán thành công!",
-            "total_amount": invoice.total_amount
-        }, status=status.HTTP_200_OK)
+        timestamp_suffix = int(timezone.now().timestamp()) % 100000
+        unique_order_code = invoice.id * 100000 + timestamp_suffix
 
+        url = provider.create_payment_link(
+            order_code=unique_order_code,
+            amount=invoice.total_amount,
+            description=f"Vien phi hdon {invoice.id}",
+            return_url="http://192.168.100.152:8000/api/v1/invoices/payos-callback/",
+            cancel_url="http://192.168.100.152:8000/api/v1/invoices/payos-callback/?status=cancel"
+        )
 
+        if not url:
+            return Response({"detail": "Không thể tạo liên kết thanh toán từ PayOS"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"payment_url": url}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='payos-callback')
+    def payos_callback(self, request):
+        status_param = request.GET.dict().get('status')
+        order_code = request.GET.dict().get('orderCode')
+
+        if status_param != 'cancel' and order_code:
+            try:
+                real_invoice_id = int(order_code) // 100000
+                invoice = Invoice.objects.get(pk=real_invoice_id)
+                invoice.status = 'PAID'
+                invoice.payment_method = 'PAYOS'
+                invoice.paid_at = timezone.now()
+                invoice.save()
+            except Invoice.DoesNotExist:
+                pass
+        return HttpResponse("<script>window.location.href='https://payos.vn';</script>")
 class ClinicStatisticsView(APIView):
     permission_classes = [permissions.AllowAny]
 

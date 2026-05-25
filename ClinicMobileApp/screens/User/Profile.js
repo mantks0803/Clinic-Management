@@ -22,6 +22,30 @@ const Profile = () => {
         ]);
     };
 
+    const getEmail = () => {
+        if (user?.email && user.email !== "") return user.email;
+        return "Chưa cập nhật";
+    };
+
+    const getPhone = () => {
+        if (!user) return "Chưa cập nhật";
+        if (user.role === 'PATIENT') return user.patient?.phone || "Chưa cập nhật";
+        if (user.role === 'DOCTOR') return user.doctor?.phone || "Chưa cập nhật";
+        return "Chưa cập nhật";
+    };
+
+    const getDob = () => {
+        if (!user) return "Chưa cập nhật";
+        if (user.role === 'PATIENT') return user.patient?.dob || "Chưa cập nhật";
+        return "Không áp dụng";
+    };
+
+    const getAddress = () => {
+        if (!user) return "Chưa cập nhật";
+        if (user.role === 'PATIENT') return user.patient?.address || "Chưa cập nhật";
+        return "Không áp dụng";
+    };
+
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
@@ -46,18 +70,23 @@ const Profile = () => {
                 />
                 <List.Item
                     title="Địa chỉ Email"
-                    description={user?.email || "Chưa cập nhật"}
+                    description={getEmail()}
                     left={props => <List.Icon {...props} icon="email" />}
                 />
                 <List.Item
                     title="Số điện thoại"
-                    description={user?.phone || "Chưa cập nhật"}
+                    description={getPhone()}
                     left={props => <List.Icon {...props} icon="phone" />}
                 />
                 <List.Item
                     title="Ngày sinh"
-                    description={user?.dob || "Chưa cập nhật"}
+                    description={getDob()}
                     left={props => <List.Icon {...props} icon="calendar" />}
+                />
+                <List.Item
+                    title="Địa chỉ / Quê quán"
+                    description={getAddress()}
+                    left={props => <List.Icon {...props} icon="map-marker" />}
                 />
             </View>
 
