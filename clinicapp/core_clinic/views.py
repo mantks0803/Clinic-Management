@@ -1,5 +1,6 @@
 from django.db import transaction
-from django.db.models import Sum, F, Count
+from django.db.models import Sum, F, Count, Case, When, Value, CharField
+from django.db.models.functions import ExtractYear
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, permissions, status, filters, parsers
 from rest_framework.decorators import action
@@ -329,8 +330,8 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             order_code=unique_order_code,
             amount=invoice.total_amount,
             description=f"Vien phi hdon {invoice.id}",
-            return_url="http://192.168.1.5:8000/api/v1/invoices/payos-callback/",
-            cancel_url="http://192.168.1.5:8000/api/v1/invoices/payos-callback/?status=cancel"
+            return_url="http://192.168.100.155:8000/api/v1/invoices/payos-callback/",
+            cancel_url="http://192.168.100.155:8000/api/v1/invoices/payos-callback/?status=cancel"
         )
 
         if not url:
@@ -363,12 +364,55 @@ class ClinicStatisticsView(APIView):
         total_revenue = Invoice.objects.filter(status='PAID').aggregate(
             total=Sum('total_amount')
         )['total'] or 0
-        patients_by_specialty = Appointment.objects.values(
+
+        revenue_tphcm = Invoice.objects.filter(
+            status='PAID', appointment__patient__address__icontains='TPHCM'
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+        revenue_tinh_khac = Invoice.objects.filter(status='PAID').exclude(
+            appointment__patient__address__icontains='TPHCM'
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+        gender_report = Patient.objects.values('gender').annotate(total=Count('id'))
+
+        specialty_report = Appointment.objects.values(
             'doctor__specialty__name'
         ).annotate(
             total_patients=Count('patient', distinct=True)
         )
+
+        age_report = Patient.objects.annotate(
+            age=2026 - ExtractYear('dob')
+        ).annotate(
+            age_group=Case(
+                When(age__lt=15, then=Value('Trẻ em')),
+                When(age__gte=15, age__lte=30, then=Value('Thanh thiếu niên')),
+                When(age__gte=31, age__lte=60, then=Value('Trung niên')),
+                When(age__gt=60, then=Value('Người cao tuổi')),
+                default=Value('Chưa cập nhật'),
+                output_field=CharField()
+            )
+        ).values('age_group').annotate(total=Count('id'))
+
+        service_report = RecordService.objects.values(
+            'service__name'
+        ).annotate(
+            usage_count=Count('id')
+        ).order_by('-usage_count')
+
+        disease_report = MedicalRecord.objects.values(
+            'diagnosis'
+        ).annotate(
+            disease_count=Count('id')
+        ).order_by('-disease_count')
+
         return Response({
             "doanh_thu_tong": total_revenue,
-            "benh_nhan_theo_khoa": patients_by_specialty
-        })
+            "doanh_thu_tphcm": revenue_tphcm,
+            "doanh_thu_tinh_khac": revenue_tinh_khac,
+            "benh_nhan_theo_gioi_tinh": list(gender_report),
+            "benh_nhan_theo_khoa": list(specialty_report),
+            "benh_nhan_theo_tuoi": list(age_report),
+            "dich_vu_su_dung": list(service_report),
+            "benh_pho_bien": list(disease_report)
+        }, status=status.HTTP_200_OK)
