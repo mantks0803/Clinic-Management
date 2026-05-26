@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { Text, Card, List, ProgressBar, Divider, ActivityIndicator } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../../configs/API';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [statData, setStatData] = useState(null);
@@ -69,31 +69,37 @@ const AdminDashboard = () => {
                     
                     <Divider style={styles.mainDivider} />
                     
-                    <View style={styles.regionRow}>
-                        <Text style={styles.regionLabel}>TP. Hồ Chí Minh:</Text>
-                        <Text style={styles.regionValue}>{formatCurrency(statData?.doanh_thu_tphcm)}</Text>
-                    </View>
+                    <TouchableOpacity onPress={() => navigation.navigate('AdminInvoiceList', { region: 'TPHCM' })}>
+                        <View style={styles.regionRow}>
+                            <Text style={styles.regionLabel}>TP. Hồ Chí Minh ➔</Text>
+                            <Text style={styles.regionValue}>{formatCurrency(statData?.doanh_thu_tphcm)}</Text>
+                        </View>
+                    </TouchableOpacity>
                     <ProgressBar progress={pctTphcm} color="#fff" style={styles.progress} />
 
-                    <View style={styles.regionRow}>
-                        <Text style={styles.regionLabel}>Các tỉnh thành khác:</Text>
-                        <Text style={styles.regionValue}>{formatCurrency(statData?.doanh_thu_tinh_khac)}</Text>
-                    </View>
+                    <TouchableOpacity onPress={() => navigation.navigate('AdminInvoiceList', { region: 'OTHER' })}>
+                        <View style={styles.regionRow}>
+                            <Text style={styles.regionLabel}>Các tỉnh thành khác ➔</Text>
+                            <Text style={styles.regionValue}>{formatCurrency(statData?.doanh_thu_tinh_khac)}</Text>
+                        </View>
+                    </TouchableOpacity>
                     <ProgressBar progress={pctOther} color="#b3e5fc" style={styles.progress} />
                 </Card.Content>
             </Card>
 
-            <Text style={styles.sectionTitle}>MÔ HÌNH BỆNH TẬT PHỔ BIẾN</Text>
+            <Text style={styles.sectionTitle}>MÔ HÌNH BỆNH TẬT PHỔ BIẾN (BẤM XEM CHI TIẾT)</Text>
             <Card style={styles.listCard}>
                 <Card.Content style={{ paddingVertical: 5 }}>
                     {statData?.benh_pho_bien?.map((item, index) => (
                         <View key={index}>
-                            <List.Item
-                                title={item.diagnosis || "Chưa xác định"}
-                                description={`Ghi nhận: ${item.disease_count} trường hợp`}
-                                left={props => <List.Icon {...props} icon="emoticon-sick-outline" color="#b71c1c" />}
-                                right={() => <Text style={styles.rankBadge}>Top {index + 1}</Text>}
-                            />
+                            <TouchableOpacity onPress={() => navigation.navigate('AdminRecordList', { disease: item.diagnosis })}>
+                                <List.Item
+                                    title={item.diagnosis || "Chưa xác định"}
+                                    description={`Ghi nhận: ${item.disease_count} trường hợp ➔`}
+                                    left={props => <List.Icon {...props} icon="emoticon-sick-outline" color="#b71c1c" />}
+                                    right={() => <Text style={styles.rankBadge}>Top {index + 1}</Text>}
+                                />
+                            </TouchableOpacity>
                             {index < statData.benh_pho_bien.length - 1 && <Divider />}
                         </View>
                     ))}
@@ -119,13 +125,15 @@ const AdminDashboard = () => {
             <Text style={styles.sectionTitle}>NHÂN KHẨU HỌC BỆNH NHÂN</Text>
             
             <Card style={styles.subCard}>
-                <Card.Title title="Phân bổ theo Khoa lâm sàng" titleStyle={styles.subCardTitle} />
+                <Card.Title title="Phân bổ theo Khoa lâm sàng (Bấm xem lịch)" titleStyle={styles.subCardTitle} />
                 <Card.Content>
                     {statData?.benh_nhan_theo_khoa?.map((item, index) => (
-                        <View key={index} style={styles.dataRow}>
-                            <Text style={styles.dataLabel}>{item.doctor__specialty__name}</Text>
-                            <Text style={styles.dataValue}>{item.total_patients} bệnh nhân</Text>
-                        </View>
+                        <TouchableOpacity key={index} onPress={() => navigation.navigate('AdminAppointmentList', { specialty: item.doctor__specialty__name })}>
+                            <View style={styles.dataRow}>
+                                <Text style={styles.dataLabel}>{item.doctor__specialty__name} ➔</Text>
+                                <Text style={styles.dataValue}>{item.total_patients} bệnh nhân</Text>
+                            </View>
+                        </TouchableOpacity>
                     ))}
                 </Card.Content>
             </Card>
@@ -173,7 +181,7 @@ const styles = StyleSheet.create({
     rankBadge: { alignSelf: 'center', backgroundColor: '#ffebee', color: '#c62828', fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     subCard: { backgroundColor: '#fff', borderRadius: 10, elevation: 2, marginBottom: 12 },
     subCardTitle: { fontSize: 15, fontWeight: 'bold', color: '#263238' },
-    dataRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#eceff1' },
+    dataRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#eceff1' },
     dataLabel: { fontSize: 14, color: '#37474f' },
     dataValue: { fontSize: 14, fontWeight: '600', color: '#005b9f' }
 });

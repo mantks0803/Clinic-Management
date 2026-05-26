@@ -20,8 +20,8 @@ from .serializers import (
     UserSerializer, PatientSerializer, SpecialtySerializer, DoctorSerializer,
     AppointmentSerializer, MedicalRecordSerializer, RecordServiceSerializer,
     MedicineSerializer, MedicineBatchSerializer,
-    PrescriptionSerializer, PrescriptionDetailSerializer, InvoiceSerializer,
-    ServiceSerializer
+    PrescriptionDetailSerializer, InvoiceSerializer,
+    ServiceSerializer, PrescriptionSerializer
 )
 from .payos_provider import PayOSProvider
 
@@ -84,11 +84,42 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
 
     def get_queryset(self):
         user = self.request.user
+        if getattr(self, 'swagger_fake_view', False):
+            return Appointment.objects.all().order_by('-id')
+        if not user or not user.is_authenticated:
+            return Appointment.objects.none()
+
+        queryset = Appointment.objects.all().order_by('-id')
         if user.role == 'PATIENT':
-            return Appointment.objects.filter(patient__user=user).order_by('-id')
+            queryset = queryset.filter(patient__user=user)
         elif user.role == 'DOCTOR':
-            return Appointment.objects.filter(doctor__user=user).order_by('-id')
-        return Appointment.objects.all().order_by('-id')
+            queryset = queryset.filter(doctor__user=user)
+
+        spec_name = self.request.query_params.get('specialty_name')
+        if spec_name:
+            queryset = queryset.filter(doctor__specialty__name=spec_name)
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = serializer.data
+            for index, item in enumerate(data):
+                obj = page[index]
+                item['patient_name'] = obj.patient.full_name
+                item['doctor_name'] = obj.doctor.full_name
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        for index, item in enumerate(data):
+            obj = queryset[index]
+            item['patient_name'] = obj.patient.full_name
+            item['doctor_name'] = obj.doctor.full_name
+        return Response(data)
 
     @action(detail=True, methods=['post'], url_path='confirm')
     def confirm_appointment(self, request, pk=None):
@@ -214,11 +245,40 @@ class MedicalRecordViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retr
 
     def get_queryset(self):
         user = self.request.user
+        if getattr(self, 'swagger_fake_view', False):
+            return MedicalRecord.objects.all().order_by('-id')
+        if not user or not user.is_authenticated:
+            return MedicalRecord.objects.none()
+
+        queryset = MedicalRecord.objects.all().order_by('-id')
         if user.role == 'PATIENT':
-            return MedicalRecord.objects.filter(appointment__patient__user=user).order_by('-id')
+            queryset = queryset.filter(appointment__patient__user=user)
         elif user.role == 'DOCTOR':
-            return MedicalRecord.objects.filter(appointment__doctor__user=user).order_by('-id')
-        return MedicalRecord.objects.all().order_by('-id')
+            queryset = queryset.filter(appointment__doctor__user=user)
+
+        diag = self.request.query_params.get('diagnosis')
+        if diag:
+            queryset = queryset.filter(diagnosis=diag)
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = serializer.data
+            for index, item in enumerate(data):
+                obj = page[index]
+                item['patient_name'] = obj.appointment.patient.full_name
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        for index, item in enumerate(data):
+            obj = queryset[index]
+            item['patient_name'] = obj.appointment.patient.full_name
+        return Response(data)
 
 
 class RecordServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
@@ -263,7 +323,7 @@ class PrescriptionDetailViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer.save()
 
 
-class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
+class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
     serializer_class = InvoiceSerializer
 
     def get_permissions(self):
@@ -278,9 +338,38 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        if getattr(self, 'swagger_fake_view', False):
+            return Invoice.objects.all().order_by('-id')
+
+        queryset = Invoice.objects.all().order_by('-id')
         if user.is_authenticated and user.role == 'PATIENT':
-            return Invoice.objects.filter(patient__user=user).order_by('-id')
-        return Invoice.objects.all().order_by('-id')
+            queryset = queryset.filter(patient__user=user)
+
+        region = self.request.query_params.get('region')
+        if region == 'TPHCM':
+            queryset = queryset.filter(appointment__patient__address__icontains='TPHCM')
+        elif region == 'OTHER':
+            queryset = queryset.exclude(appointment__patient__address__icontains='TPHCM')
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = serializer.data
+            for index, item in enumerate(data):
+                obj = page[index]
+                item['patient_name'] = obj.patient.full_name
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        for index, item in enumerate(data):
+            obj = queryset[index]
+            item['patient_name'] = obj.patient.full_name
+        return Response(data)
 
     @action(detail=False, methods=['get'], url_path='by-appointment')
     def by_appointment(self, request):
@@ -335,7 +424,8 @@ class InvoiceViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         )
 
         if not url:
-            return Response({"detail": "Không thể tạo liên kết thanh toán từ PayOS"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Không thể tạo liên kết thanh toán từ PayOS"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"payment_url": url}, status=status.HTTP_200_OK)
 

@@ -12,6 +12,9 @@ import BottomTab from './navigations/BottomTab';
 import MedicalRecordDetail from './screens/Patient/MedicalRecordDetail';
 import PaymentScreen from './screens/Patient/PaymentScreen';
 import PaymentWebView from './screens/Patient/PaymentWebView';
+import AdminInvoiceList from './screens/Admin/AdminInvoiceList';
+import AdminRecordList from './screens/Admin/AdminRecordList';
+import AdminAppointmentList from './screens/Admin/AdminAppointmentList';
 
 const Stack = createStackNavigator();
 
@@ -43,6 +46,21 @@ const Root = () => {
                             name="PaymentWebView" 
                             component={PaymentWebView} 
                             options={{ headerShown: true, title: "Cổng thanh toán VNPay", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="AdminInvoiceList" 
+                            component={AdminInvoiceList} 
+                            options={{ headerShown: true, title: "Chi tiết hóa đơn doanh thu", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="AdminRecordList" 
+                            component={AdminRecordList} 
+                            options={{ headerShown: true, title: "Danh sách bệnh nhân mắc bệnh", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="AdminAppointmentList" 
+                            component={AdminAppointmentList} 
+                            options={{ headerShown: true, title: "Danh sách ca lịch hẹn khoa", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
                         />
                     </>
                 )}
