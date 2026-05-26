@@ -233,7 +233,7 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
             return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = MedicalService.objects.all().order_by('-id')
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated]
