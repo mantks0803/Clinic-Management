@@ -6,6 +6,7 @@ import Appointment from '../screens/Appointment';
 import Profile from '../screens/User/Profile';
 import MedicineInventory from '../screens/Staff/MedicineInventory';
 import StaffStack from './StaffStack';
+import AdminDashboard from '../screens/Admin/AdminDashboard';
 import { MyUserContext } from '../contexts/MyUserContext';
 
 const Tab = createBottomTabNavigator();
@@ -34,6 +35,14 @@ const TabNavigator = () => {
                         name="Lịch hẹn" 
                         component={Appointment} 
                         options={{ title: 'Danh sách ca khám', tabBarIcon: ({ color }) => <Icon source="calendar-check" size={30} color={color} /> }} 
+                    />
+                </>
+            ) : user && user.role === 'ADMIN' ? (
+                <>
+                    <Tab.Screen 
+                        name="AdminDashboard" 
+                        component={AdminDashboard} 
+                        options={{ title: 'Báo cáo Thống kê', tabBarIcon: ({ color }) => <Icon source="chart-bar" size={30} color={color} /> }} 
                     />
                 </>
             ) : (
