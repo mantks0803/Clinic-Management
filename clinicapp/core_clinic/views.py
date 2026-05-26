@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Sum, F, Count, Case, When, Value, CharField
+from django.db.models import Sum, F, Count, Case, When, Value, CharField, Q
 from django.db.models.functions import ExtractYear
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, permissions, status, filters, parsers
@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -121,6 +121,47 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
             item['doctor_name'] = obj.doctor.full_name
         return Response(data)
 
+    @action(detail=True, methods=['get'], url_path='medical-record')
+    def medical_record(self, request, pk=None):
+        appointment = self.get_object()
+        try:
+            record = MedicalRecord.objects.get(appointment=appointment)
+            serializer = MedicalRecordSerializer(record, context={'request': request})
+            data = serializer.data
+
+            services_data = []
+            record_services = RecordService.objects.filter(record=record).select_related('service')
+            for rs in record_services:
+                services_data.append({
+                    "id": rs.id,
+                    "service_name": rs.service.name,
+                    "price": rs.service.price
+                })
+            data["services"] = services_data
+
+            prescriptions_data = []
+            prescriptions = Prescription.objects.filter(record=record)
+            for p in prescriptions:
+                details = PrescriptionDetail.objects.filter(prescription=p)
+                for d in details:
+                    med_name = "Thuốc"
+                    if hasattr(d.batch, 'medicine') and d.batch.medicine:
+                        med_name = d.batch.medicine.name
+                    elif hasattr(d.batch, 'medicine_name'):
+                        med_name = d.batch.medicine_name
+
+                    prescriptions_data.append({
+                        "id": d.id,
+                        "medicine_name": med_name,
+                        "quantity": d.quantity,
+                        "dosage_instruction": d.dosage_instruction
+                    })
+
+            data["prescriptions"] = prescriptions_data
+            return Response(data, status=status.HTTP_200_OK)
+        except MedicalRecord.DoesNotExist:
+            return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=True, methods=['post'], url_path='confirm')
     def confirm_appointment(self, request, pk=None):
         if request.user.role != 'DOCTOR':
@@ -200,37 +241,6 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         appointment.save()
 
         return Response({"detail": "Lập hồ sơ khám bệnh và kê đơn thành công!"}, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['get'], url_path='medical-record')
-    def medical_record(self, request, pk=None):
-        appointment = self.get_object()
-        try:
-            record = MedicalRecord.objects.get(appointment=appointment)
-            serializer = MedicalRecordSerializer(record, context={'request': request})
-            data = serializer.data
-
-            prescriptions_data = []
-            prescriptions = Prescription.objects.filter(record=record)
-            for p in prescriptions:
-                details = PrescriptionDetail.objects.filter(prescription=p)
-                for d in details:
-                    med_name = "Thuốc"
-                    if hasattr(d.batch, 'medicine') and d.batch.medicine:
-                        med_name = d.batch.medicine.name
-                    elif hasattr(d.batch, 'medicine_name'):
-                        med_name = d.batch.medicine_name
-
-                    prescriptions_data.append({
-                        "id": d.id,
-                        "medicine_name": med_name,
-                        "quantity": d.quantity,
-                        "dosage_instruction": d.dosage_instruction
-                    })
-
-            data["prescriptions"] = prescriptions_data
-            return Response(data, status=status.HTTP_200_OK)
-        except MedicalRecord.DoesNotExist:
-            return Response({"detail": "Chưa có bệnh án cho lịch hẹn này"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -415,12 +425,16 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         timestamp_suffix = int(timezone.now().timestamp()) % 100000
         unique_order_code = invoice.id * 100000 + timestamp_suffix
 
+        base_url = request.build_absolute_uri('/').rstrip('/')
+        return_url = f"{base_url}/api/v1/invoices/payos-callback/"
+        cancel_url = f"{base_url}/api/v1/invoices/payos-callback/?status=cancel"
+
         url = provider.create_payment_link(
             order_code=unique_order_code,
             amount=invoice.total_amount,
             description=f"Vien phi hdon {invoice.id}",
-            return_url="http://192.168.100.155:8000/api/v1/invoices/payos-callback/",
-            cancel_url="http://192.168.100.155:8000/api/v1/invoices/payos-callback/?status=cancel"
+            return_url=return_url,
+            cancel_url=cancel_url
         )
 
         if not url:
@@ -506,3 +520,57 @@ class ClinicStatisticsView(APIView):
             "dich_vu_su_dung": list(service_report),
             "benh_pho_bien": list(disease_report)
         }, status=status.HTTP_200_OK)
+
+
+class StaffNotificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        today = timezone.now().date()
+        expire_threshold = today + timedelta(days=14)
+
+        batches = MedicineBatch.objects.filter(
+            Q(quantity__lt=50) | Q(expiration_date__lte=expire_threshold)
+        ).select_related('medicine')
+
+        notifications = []
+        for b in batches:
+            if b.quantity < 50:
+                notifications.append({
+                    "id": f"qty-{b.id}",
+                    "type": "DANGER",
+                    "title": "Cảnh báo hết hàng",
+                    "message": f"Thuốc {b.medicine.name} (Lô: {b.batch_number}) chỉ còn {b.quantity} viên trong kho."
+                })
+            if b.expiration_date <= expire_threshold:
+                notifications.append({
+                    "id": f"exp-{b.id}",
+                    "type": "WARNING",
+                    "title": "Cảnh báo hết hạn",
+                    "message": f"Lô {b.batch_number} của thuốc {b.medicine.name} sắp hết hạn vào ngày {b.expiration_date}."
+                })
+        return Response(notifications, status=status.HTTP_200_OK)
+
+
+class PatientNotificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        today = timezone.now().date()
+        future_threshold = today + timedelta(days=7)
+
+        appointments = Appointment.objects.filter(
+            patient__user=request.user,
+            appointment_date__gte=today,
+            appointment_date__lte=future_threshold
+        ).select_related('doctor')
+
+        notifications = []
+        for app in appointments:
+            notifications.append({
+                "id": f"app-{app.id}",
+                "type": "INFO",
+                "title": "Lịch khám sắp tới",
+                "message": f"Bạn có lịch khám {app.doctor.full_name} vào ngày {app.appointment_date} khung giờ {app.time_slot}. Vui lòng đến đúng giờ."
+            })
+        return Response(notifications, status=status.HTTP_200_OK)

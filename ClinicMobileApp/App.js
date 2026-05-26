@@ -15,6 +15,7 @@ import PaymentWebView from './screens/Patient/PaymentWebView';
 import AdminInvoiceList from './screens/Admin/AdminInvoiceList';
 import AdminRecordList from './screens/Admin/AdminRecordList';
 import AdminAppointmentList from './screens/Admin/AdminAppointmentList';
+import MedicalExamination from './screens/Doctor/MedicalExamination';
 
 const Stack = createStackNavigator();
 
@@ -61,6 +62,11 @@ const Root = () => {
                             name="AdminAppointmentList" 
                             component={AdminAppointmentList} 
                             options={{ headerShown: true, title: "Danh sách ca lịch hẹn khoa", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="MedicalExamination" 
+                            component={MedicalExamination} 
+                            options={{ headerShown: true, title: "Phòng khám bệnh lâm sàng", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
                         />
                     </>
                 )}

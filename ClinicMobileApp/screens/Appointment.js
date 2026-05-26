@@ -1,42 +1,26 @@
-import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl, Alert } from 'react-native';
-import { Card, Chip, ActivityIndicator, Badge, Button } from 'react-native-paper';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
+import { Text, Card, Button, Chip, Divider, ActivityIndicator } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
-import { MyUserContext } from '../contexts/MyUserContext';
-import API, { endpoints, authApi } from '../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authApi } from '../configs/API';
+import { MyUserContext } from '../contexts/MyUserContext';
 
 const Appointment = ({ navigation }) => {
     const user = useContext(MyUserContext);
-    const [appointments, setAppointments] = useState([]);
-    const [filteredAppointments, setFilteredAppointments] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedFilter, setSelectedFilter] = useState('ALL');
+    const [appointments, setAppointments] = useState([]);
 
-    const isDoctor = user?.role === 'DOCTOR';
-
-    const loadAppointments = async (showProgress = true) => {
-        if (!user) return;
-        if (showProgress) setLoading(true);
-
+    const loadAppointments = async (showIndicator = true) => {
+        if (showIndicator) setLoading(true);
         try {
             const token = await AsyncStorage.getItem("access_token");
-            let url = `${endpoints['appointments']}?`;
-            
-            if (isDoctor) {
-                url += `doctor=${user.doctor?.id}`;
-            } else {
-                url += `patient=${user.patient?.id}`;
-            }
-
-            const res = await authApi(token).get(url);
-            let data = res.data.results || res.data || [];
-            data.sort((a, b) => b.id - a.id);
-            setAppointments(data);
-            applyFilter(selectedFilter, data);
+            const res = await authApi(token).get('/api/v1/appointments/');
+            setAppointments(res.data.results || res.data || []);
         } catch (ex) {
             console.error(ex);
+            Alert.alert("Lỗi", "Không thể tải danh sách lịch hẹn!");
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -46,145 +30,143 @@ const Appointment = ({ navigation }) => {
     useFocusEffect(
         useCallback(() => {
             loadAppointments(true);
-        }, [user, selectedFilter])
+        }, [])
     );
 
-    const handleAction = async (id, actionType) => {
-        setLoading(true);
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadAppointments(false);
+    };
+
+    const handleConfirm = async (id) => {
         try {
             const token = await AsyncStorage.getItem("access_token");
-            const path = actionType === 'CONFIRM' ? 'confirm' : 'reject';
-            await authApi(token).post(`${endpoints['appointments']}${id}/${path}/`);
-            Alert.alert("Thành công", actionType === 'CONFIRM' ? "Đã duyệt lịch hẹn!" : "Đã từ chối lịch hẹn!");
+            await authApi(token).post(`/api/v1/appointments/${id}/confirm/`);
+            Alert.alert("Thành công", "Đã duyệt chấp nhận lịch hẹn này!");
             loadAppointments(false);
         } catch (ex) {
-            Alert.alert("Lỗi", "Không thể thực hiện thao tác này!");
-        } finally {
-            setLoading(false);
+            Alert.alert("Thất bại", "Lỗi phê duyệt lịch hẹn!");
         }
     };
 
-    const applyFilter = (filterType, allData = appointments) => {
-        setSelectedFilter(filterType);
-        if (filterType === 'ALL') setFilteredAppointments(allData);
-        else setFilteredAppointments(allData.filter(item => item.status === filterType));
-    };
-
-    const getStatusDetails = (status) => {
-        switch (status) {
-            case 'PENDING': return { label: 'Chờ xử lý', color: '#ff9800' };
-            case 'CONFIRMED': return { label: 'Đã duyệt', color: '#2e7d32' };
-            case 'CANCELLED': return { label: 'Đã hủy', color: '#d32f2f' };
-            case 'COMPLETED': return { label: 'Hoàn thành', color: '#00796b' };
-            default: return { label: status, color: '#6c757d' };
+    const handleReject = async (id) => {
+        try {
+            const token = await AsyncStorage.getItem("access_token");
+            await authApi(token).post(`/api/v1/appointments/${id}/reject/`);
+            Alert.alert("Thành công", "Đã hủy bỏ ca lịch hẹn này!");
+            loadAppointments(false);
+        } catch (ex) {
+            Alert.alert("Thất bại", "Lỗi hủy lịch hẹn!");
         }
     };
+
+    const getStatusChip = (status) => {
+        if (status === 'COMPLETED') return { label: 'Đã hoàn thành', color: '#2e7d32', bg: '#e8f5e9' };
+        if (status === 'CONFIRMED') return { label: 'Đã duyệt', color: '#0288d1', bg: '#e1f5fe' };
+        if (status === 'CANCELLED') return { label: 'Đã hủy', color: '#c62828', bg: '#ffebee' };
+        return { label: 'Chờ duyệt', color: '#f57c00', bg: '#fff3e0' };
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#005b9f" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
-            <View style={styles.filterRow}>
-                <Chip selected={selectedFilter === 'ALL'} onPress={() => applyFilter('ALL')} style={styles.chip}>Tất cả</Chip>
-                <Chip selected={selectedFilter === 'PENDING'} onPress={() => applyFilter('PENDING')} style={styles.chip}>Đang chờ</Chip>
-                <Chip selected={selectedFilter === 'CONFIRMED'} onPress={() => applyFilter('CONFIRMED')} style={styles.chip}>Đã duyệt</Chip>
-                <Chip selected={selectedFilter === 'COMPLETED'} onPress={() => applyFilter('COMPLETED')} style={styles.chip}>Hoàn thành</Chip>
-            </View>
+            <FlatList
+                data={appointments}
+                keyExtractor={item => item.id.toString()}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                renderItem={({ item }) => {
+                    const chip = getStatusChip(item.status);
+                    return (
+                        <Card style={styles.card}>
+                            <Card.Content>
+                                <View style={styles.rowSpace}>
+                                    <Text style={styles.titleText}>Mã lịch khám: #{item.id}</Text>
+                                    <Chip flat style={{ backgroundColor: chip.bg }} selectedColor={chip.color}>{chip.label}</Chip>
+                                </View>
+                                <Divider style={styles.divider} />
+                                
+                                <Text style={styles.infoLine}>Bệnh nhân: {item.patient_name || "Khách hàng hệ thống"}</Text>
+                                <Text style={styles.infoLine}>Bác sĩ: {item.doctor_name || "Bác sĩ phụ trách"}</Text>
+                                <Text style={styles.infoLine}>Ngày hẹn: {item.appointment_date} | Khung giờ: {item.time_slot}</Text>
+                                <Text style={styles.infoLine}>Lý do khám: {item.reason || "Khám định kỳ"}</Text>
 
-            <Text style={styles.headerTitle}>{isDoctor ? "YÊU CẦU ĐẶT LỊCH KHÁM" : "LỊCH HẸN CỦA TÔI"}</Text>
-
-            {loading && !refreshing ? (
-                <ActivityIndicator size="large" color="#005b9f" style={{ marginTop: 40 }} />
-            ) : (
-                <FlatList
-                    data={filteredAppointments}
-                    keyExtractor={item => item.id.toString()}
-                    contentContainerStyle={{ padding: 16 }}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadAppointments(false); }} />}
-                    renderItem={({ item }) => {
-                        const statusInfo = getStatusDetails(item.status);
-                        return (
-                            <Card style={styles.card}>
-                                <Card.Content>
-                                    <View style={styles.cardHeader}>
-                                        <Text style={styles.mainInfo}>
-                                            {isDoctor ? `BN: ${item.patient_name}` : `BS: ${item.doctor_name}`}
-                                        </Text>
-                                        <Badge style={{ backgroundColor: statusInfo.color, color: '#fff' }}>{statusInfo.label}</Badge>
-                                    </View>
-                                    <View style={styles.divider} />
-                                    <Text style={styles.subInfo}>📅 Ngày: {item.appointment_date}  |  ⏰ Giờ: {item.time_slot}</Text>
-                                    <Text style={styles.subInfo}>📝 Lý do: {item.reason}</Text>
-
-                                    {isDoctor && item.status === 'PENDING' && (
-                                        <View style={styles.actionRow}>
-                                            <Button mode="contained" onPress={() => handleAction(item.id, 'CONFIRM')} style={[styles.btnAction, {backgroundColor: '#2e7d32'}]}>DUYỆT</Button>
-                                            <Button mode="outlined" onPress={() => handleAction(item.id, 'REJECT')} textColor="#d32f2f" style={styles.btnAction}>TỪ CHỐI</Button>
+                                <View style={styles.actionArea}>
+                                    {user && user.role === 'DOCTOR' && item.status === 'PENDING' && (
+                                        <View style={styles.rowButtons}>
+                                            <Button mode="contained" buttonColor="#2e7d32" onPress={() => handleConfirm(item.id)} style={styles.flexBtn}>Duyệt</Button>
+                                            <Button mode="contained" buttonColor="#c62828" onPress={() => handleReject(item.id)} style={[styles.flexBtn, { marginLeft: 8 }]}>Hủy lịch</Button>
                                         </View>
                                     )}
 
-                                    {isDoctor && item.status === 'CONFIRMED' && (
-                                        <View style={styles.actionRow}>
-                                            <Button 
-                                                mode="contained" 
-                                                icon="stethoscope"
-                                                onPress={() => navigation.navigate('Trang chủ Stack', {
-                                                    screen: 'MedicalExamination',
-                                                    params: { appointmentId: item.id, patientName: item.patient_name }
-                                                })} 
-                                                style={[styles.btnAction, {flex: 1, backgroundColor: '#005b9f'}]}
-                                            >
-                                                BẮT ĐẦU KHÁM BỆNH
-                                            </Button>
-                                        </View>
+                                    {user && user.role === 'DOCTOR' && item.status === 'CONFIRMED' && (
+                                        <Button 
+                                            mode="contained" 
+                                            buttonColor="#005b9f" 
+                                            icon="medical-bag"
+                                            onPress={() => navigation.navigate('MedicalExamination', { appointmentId: item.id, patientName: item.patient_name })}
+                                            style={styles.fullBtn}
+                                        >
+                                            BẮT ĐẦU KHÁM BỆNH
+                                        </Button>
                                     )}
 
                                     {item.status === 'COMPLETED' && (
-                                        <View style={styles.actionRow}>
+                                        <View style={user && user.role === 'PATIENT' ? styles.rowButtons : null}>
                                             <Button 
                                                 mode="contained" 
-                                                icon="file-document"
-                                                buttonColor="#005b9f"
+                                                buttonColor="#005b9f" 
+                                                icon="file-document-outline"
                                                 onPress={() => navigation.navigate('MedicalRecordDetail', { appointmentId: item.id })}
-                                                style={{ flex: 0.48 }}
-                                                labelStyle={{ fontSize: 12 }}
+                                                style={user && user.role === 'PATIENT' ? styles.flexBtn : styles.fullBtn}
                                             >
-                                                BỆNH ÁN
+                                                XEM BỆNH ÁN
                                             </Button>
-                                            <Button 
-                                                mode="contained" 
-                                                icon="credit-card"
-                                                buttonColor="#2e7d32"
-                                                onPress={() => navigation.navigate('PaymentScreen', { appointmentId: item.id })}
-                                                style={{ flex: 0.48 }}
-                                                labelStyle={{ fontSize: 12 }}
-                                            >
-                                                THANH TOÁN
-                                            </Button>
+                                            {user && user.role === 'PATIENT' && (
+                                                <Button 
+                                                    mode="contained" 
+                                                    buttonColor="#0288d1" 
+                                                    icon="credit-card-outline"
+                                                    onPress={() => navigation.navigate('PaymentScreen', { appointmentId: item.id })}
+                                                    style={[styles.flexBtn, { marginLeft: 8 }]}
+                                                >
+                                                    THANH TOÁN
+                                                </Button>
+                                            )}
                                         </View>
                                     )}
-                                </Card.Content>
-                            </Card>
-                        );
-                    }}
-                    ListEmptyComponent={<Text style={styles.emptyText}>Không có lịch hẹn nào</Text>}
-                />
-            )}
+                                </View>
+                            </Card.Content>
+                        </Card>
+                    );
+                }}
+                ListEmptyComponent={
+                    <Text style={styles.emptyText}>Hiện tại chưa ghi nhận ca lịch hẹn nào.</Text>
+                }
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
-    filterRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, backgroundColor: '#fff', elevation: 3 },
-    headerTitle: { textAlign: 'center', fontSize: 16, fontWeight: 'bold', color: '#005b9f', marginTop: 15 },
-    card: { marginBottom: 12, borderRadius: 10, backgroundColor: '#fff' },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    mainInfo: { fontSize: 16, fontWeight: 'bold' },
-    divider: { height: 1, backgroundColor: '#eee', marginVertical: 8 },
-    subInfo: { fontSize: 14, color: '#555', marginBottom: 4 },
-    actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
-    btnAction: { flex: 0.48 },
-    emptyText: { textAlign: 'center', marginTop: 50, color: 'gray' },
-    chip: { height: 35 }
+    container: { flex: 1, backgroundColor: '#f5f7fa', padding: 12 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' },
+    card: { backgroundColor: '#fff', borderRadius: 10, marginBottom: 12, elevation: 2 },
+    rowSpace: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    titleText: { fontSize: 15, fontWeight: 'bold', color: '#263238' },
+    divider: { marginVertical: 8, backgroundColor: '#cfd8dc' },
+    infoLine: { fontSize: 13, color: '#455a64', marginVertical: 3 },
+    actionArea: { marginTop: 10 },
+    rowButtons: { flexDirection: 'row', justifyContent: 'space-between' },
+    flexBtn: { flex: 1, borderRadius: 6 },
+    fullBtn: { width: '100%', borderRadius: 6, paddingVertical: 2 },
+    emptyText: { textAlign: 'center', marginTop: 40, color: '#90a4ae' }
 });
 
 export default Appointment;
