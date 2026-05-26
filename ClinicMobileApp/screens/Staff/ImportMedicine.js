@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Alert, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,7 +11,7 @@ const ImportMedicine = ({ route, navigation }) => {
     const [batchNumber, setBatchNumber] = useState('');
     const [quantity, setQuantity] = useState('');
     const [sellingPrice, setSellingPrice] = useState('');
-    
+    const [loading, setLoading] = useState(false);
     const [rawDate, setRawDate] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
     const [expirationDate, setExpirationDate] = useState(new Date().toISOString().split('T')[0]);
@@ -33,85 +33,81 @@ const ImportMedicine = ({ route, navigation }) => {
         }
     };
 
-    const [loading, setLoading] = useState(false);
-
     const handleImport = async () => {
         if (!selectedMedicine || !batchNumber || !quantity || !sellingPrice) {
             Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin lô thuốc!");
             return;
         }
-
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem('access_token');
-            
             const data = {
-                medicine: parseInt(selectedMedicine),   
-                batch_number: batchNumber,              
-                quantity: parseInt(quantity),           
-                selling_price: parseFloat(sellingPrice), 
-                import_date: new Date().toISOString().split('T')[0], 
-                expiration_date: expirationDate         
+                medicine: parseInt(selectedMedicine),
+                batch_number: batchNumber,
+                quantity: int(quantity),
+                selling_price: parseFloat(sellingPrice),
+                import_date: new Date().toISOString().split('T')[0],
+                expiration_date: expirationDate
             };
-
             await authApi(token).post(endpoints['medicine-batches'], data);
-            Alert.alert("Thành công", "Đã nhập lô thuốc mới vào kho!");
-            
+            Alert.alert("Thành công", "Đã nhập kho lô thuốc thành công!");
             setBatchNumber('');
             setQuantity('');
             setSellingPrice('');
-            
-            navigation.navigate('MedicineInventory');
         } catch (ex) {
-            if (ex.response) {
-                console.info("BACKEND DJANGO:", ex.response.data);
-            }
-            Alert.alert("Lỗi nhập thuốc", "Không thể lưu dữ liệu, hãy chắc chắn rằng Số lô thuốc này chưa từng tồn tại trên hệ thống!");
+            console.error(ex);
+            Alert.alert("Thất bại", "Lỗi nhập kho thuốc!");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <ScrollView style={MyStyles.margin}>
-            <Text style={[MyStyles.subject, { marginTop: 15 }]}>LẬP PHIẾU NHẬP KHO</Text>
+        <ScrollView style={MyStyles.container} contentContainerStyle={{ paddingBottom: 30 }}>
+            <Button 
+                mode="contained" 
+                icon="plus-circle" 
+                onPress={() => navigation.navigate('CreateMedicalService')} 
+                style={styles.serviceBtn}
+                buttonColor="#00796b"
+            >
+                QUẢN LÝ: THÊM DỊCH VỤ CẬN LÂM SÀNG
+            </Button>
+
+            <Text style={styles.sectionTitle}>THỦ TỤC NHẬP KHO THUỐC</Text>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <TextInput
-                    label="ID Thuốc gốc"
-                    value={selectedMedicine}
-                    onChangeText={setSelectedMedicine}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    style={[MyStyles.margin, { flex: 0.6 }]}
-                />
-                <Button 
-                    mode="outlined" 
-                    onPress={() => navigation.navigate('CreateNewMedicine')}
-                    style={[MyStyles.margin, { flex: 0.36, marginTop: 12, height: 50, justifyContent: 'center' }]}
-                    labelStyle={{ fontSize: 11 }}
-                >
-                    + Thuốc mới
-                </Button>
-            </View>
+            <Button mode="outlined" onPress={() => navigation.navigate('CreateNewMedicine')} style={MyStyles.margin}>
+                Chưa có thuốc gốc? Tạo mới ngay
+            </Button>
 
             <TextInput
-                label="Số lô thuốc (Ví dụ: LÔ-PARA-2026)"
+                label="Mã thuốc gốc (ID số)"
+                value={selectedMedicine}
+                onChangeText={setSelectedMedicine}
+                mode="outlined"
+                keyboardType="numeric"
+                style={MyStyles.margin}
+            />
+
+            <TextInput
+                label="Mã số lô thuốc mới"
                 value={batchNumber}
                 onChangeText={setBatchNumber}
                 mode="outlined"
                 style={MyStyles.margin}
             />
+
             <TextInput
-                label="Số lượng vỉ/hộp nhập kho"
+                label="Số lượng viên nhập kho"
                 value={quantity}
                 onChangeText={setQuantity}
                 mode="outlined"
                 keyboardType="numeric"
                 style={MyStyles.margin}
             />
+
             <TextInput
-                label="Giá bán lẻ trên mỗi vỉ/hộpp (VND)"
+                label="Giá bán lẻ trên mỗi vỉ/hộp (VND)"
                 value={sellingPrice}
                 onChangeText={setSellingPrice}
                 mode="outlined"
@@ -149,5 +145,10 @@ const ImportMedicine = ({ route, navigation }) => {
         </ScrollView>
     );
 };
+
+const styles = StyleSheet.create({
+    serviceBtn: { margin: 10, padding: 4, borderRadius: 8 },
+    sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#555', marginHorizontal: 12, marginTop: 15, marginBottom: 5 }
+});
 
 export default ImportMedicine;
