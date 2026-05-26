@@ -7,6 +7,8 @@ import Profile from '../screens/User/Profile';
 import MedicineInventory from '../screens/Staff/MedicineInventory';
 import StaffStack from './StaffStack';
 import AdminDashboard from '../screens/Admin/AdminDashboard';
+import StaffNotifications from '../screens/Staff/StaffNotifications';
+import PatientNotifications from '../screens/Patient/PatientNotifications';
 import { MyUserContext } from '../contexts/MyUserContext';
 
 const Tab = createBottomTabNavigator();
@@ -26,7 +28,12 @@ const TabNavigator = () => {
                     <Tab.Screen 
                         name="ImportMedicine" 
                         component={StaffStack} 
-                        options={{ title: 'Nhập thuốc', headerShown: false, tabBarIcon: ({ color }) => <Icon source="plus-box" size={30} color={color} /> }} 
+                        options={{ title: 'Nhập kho', headerShown: false, tabBarIcon: ({ color }) => <Icon source="plus-box" size={30} color={color} /> }} 
+                    />
+                    <Tab.Screen 
+                        name="StaffNotifications" 
+                        component={StaffNotifications} 
+                        options={{ title: 'Thông báo', tabBarIcon: ({ color }) => <Icon source="bell-ring" size={30} color="#d32f2f" /> }} 
                     />
                 </>
             ) : user && user.role === 'DOCTOR' ? (
@@ -56,6 +63,11 @@ const TabNavigator = () => {
                         name="Lịch hẹn" 
                         component={Appointment} 
                         options={{ title: 'Lịch hẹn', tabBarIcon: ({ color }) => <Icon source="calendar" size={30} color={color} /> }} 
+                    />
+                    <Tab.Screen 
+                        name="PatientNotifications" 
+                        component={PatientNotifications} 
+                        options={{ title: 'Thông báo', tabBarIcon: ({ color }) => <Icon source="bell-alert" size={30} color="#d32f2f" /> }} 
                     />
                 </>
             )}

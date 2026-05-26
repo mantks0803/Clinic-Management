@@ -85,7 +85,7 @@ const MedicalExamination = ({ route, navigation }) => {
                     text: "OK", 
                     onPress: () => {
                         navigation.goBack();
-                        navigation.navigate('Lịch hẹn');
+            
                     } 
                 }
             ]);

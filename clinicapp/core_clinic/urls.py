@@ -20,4 +20,6 @@ router.register(r'invoices', views.InvoiceViewSet, basename='invoices')
 
 urlpatterns = [
     path('statistics/', views.ClinicStatisticsView.as_view(), name='clinic-statistics'),
+    path('notifications/staff/', views.StaffNotificationView.as_view(), name='staff-notifications'),
+    path('notifications/patient/', views.PatientNotificationView.as_view(), name='patient-notifications'),
 ] + router.urls
