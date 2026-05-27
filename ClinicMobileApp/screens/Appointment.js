@@ -1,16 +1,22 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
-import { Text, Card, Button, Chip, Divider, ActivityIndicator } from 'react-native-paper';
+import React, { useState, useContext, useCallback } from 'react';
+import { View, FlatList, RefreshControl, Alert } from 'react-native';
+import { Text, Card, Button, Chip, Divider, ActivityIndicator, Portal, Dialog, TextInput } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../configs/API';
 import { MyUserContext } from '../contexts/MyUserContext';
+import styles from '../styles/AppointmentStyles';
 
 const Appointment = ({ navigation }) => {
     const user = useContext(MyUserContext);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [appointments, setAppointments] = useState([]);
+    
+    const [dialogVisible, setDialogVisible] = useState(false);
+    const [selectedId, setSelectedId] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelLoading, setCancelLoading] = useState(false);
 
     const loadAppointments = async (showIndicator = true) => {
         if (showIndicator) setLoading(true);
@@ -60,6 +66,33 @@ const Appointment = ({ navigation }) => {
         }
     };
 
+    const openCancelDialog = (id) => {
+        setSelectedId(id);
+        setCancelReason('');
+        setDialogVisible(true);
+    };
+
+    const handlePatientCancel = async () => {
+        if (!cancelReason.trim()) {
+            Alert.alert("Thông báo", "Vui lòng nhập lý do hủy lịch hẹn!");
+            return;
+        }
+        setCancelLoading(true);
+        try {
+            const token = await AsyncStorage.getItem("access_token");
+            await authApi(token).post(`/api/v1/appointments/${selectedId}/cancel/`, {
+                reason: cancelReason
+            });
+            setDialogVisible(false);
+            Alert.alert("Thành công", "Bạn đã hủy ca hẹn khám thành công!");
+            loadAppointments(false);
+        } catch (ex) {
+            Alert.alert("Thất bại", "Không thể thực hiện hủy lịch lúc này!");
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
     const getStatusChip = (status) => {
         if (status === 'COMPLETED') return { label: 'Đã hoàn thành', color: '#2e7d32', bg: '#e8f5e9' };
         if (status === 'CONFIRMED') return { label: 'Đã duyệt', color: '#0288d1', bg: '#e1f5fe' };
@@ -96,6 +129,9 @@ const Appointment = ({ navigation }) => {
                                 <Text style={styles.infoLine}>Bác sĩ: {item.doctor_name || "Bác sĩ phụ trách"}</Text>
                                 <Text style={styles.infoLine}>Ngày hẹn: {item.appointment_date} | Khung giờ: {item.time_slot}</Text>
                                 <Text style={styles.infoLine}>Lý do khám: {item.reason || "Khám định kỳ"}</Text>
+                                {item.status === 'CANCELLED' && item.cancel_reason && (
+                                    <Text style={[styles.infoLine, {color: '#c62828', fontWeight: 'bold'}]}>Lý do hủy: {item.cancel_reason}</Text>
+                                )}
 
                                 <View style={styles.actionArea}>
                                     {user && user.role === 'DOCTOR' && item.status === 'PENDING' && (
@@ -114,6 +150,18 @@ const Appointment = ({ navigation }) => {
                                             style={styles.fullBtn}
                                         >
                                             BẮT ĐẦU KHÁM BỆNH
+                                        </Button>
+                                    )}
+
+                                    {user && user.role === 'PATIENT' && (item.status === 'PENDING' || item.status === 'CONFIRMED') && (
+                                        <Button 
+                                            mode="contained" 
+                                            buttonColor="#c62828" 
+                                            icon="calendar-remove"
+                                            onPress={() => openCancelDialog(item.id)}
+                                            style={[styles.fullBtn, {marginTop: 4}]}
+                                        >
+                                            HỦY LỊCH KHÁM NÀY
                                         </Button>
                                     )}
 
@@ -150,23 +198,29 @@ const Appointment = ({ navigation }) => {
                     <Text style={styles.emptyText}>Hiện tại chưa ghi nhận ca lịch hẹn nào.</Text>
                 }
             />
+
+            <Portal>
+                <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
+                    <Dialog.Title>Xác nhận hủy lịch khám</Dialog.Title>
+                    <Dialog.Content>
+                        <Text style={{marginBottom: 10, color: '#555'}}>Vui lòng nhập lý do hủy lịch hẹn để hệ thống lưu vết thông tin lâm sàng:</Text>
+                        <TextInput
+                            label="Lý do hủy lịch (*)"
+                            value={cancelReason}
+                            onChangeText={setCancelReason}
+                            mode="outlined"
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => setDialogVisible(false)} disabled={cancelLoading}>QUAY LẠI</Button>
+                        {cancelLoading ? <ActivityIndicator size="small" color="red" style={{marginRight: 15}} /> : (
+                            <Button onPress={handlePatientCancel} textColor="red">XÁC NHẬN HỦY</Button>
+                        )}
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f7fa', padding: 12 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' },
-    card: { backgroundColor: '#fff', borderRadius: 10, marginBottom: 12, elevation: 2 },
-    rowSpace: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    titleText: { fontSize: 15, fontWeight: 'bold', color: '#263238' },
-    divider: { marginVertical: 8, backgroundColor: '#cfd8dc' },
-    infoLine: { fontSize: 13, color: '#455a64', marginVertical: 3 },
-    actionArea: { marginTop: 10 },
-    rowButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-    flexBtn: { flex: 1, borderRadius: 6 },
-    fullBtn: { width: '100%', borderRadius: 6, paddingVertical: 2 },
-    emptyText: { textAlign: 'center', marginTop: 40, color: '#90a4ae' }
-});
 
 export default Appointment;
