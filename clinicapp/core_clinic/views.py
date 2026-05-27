@@ -1,21 +1,23 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import Sum, F, Count, Case, When, Value, CharField, Q
 from django.db.models.functions import ExtractYear
+from django.http import HttpResponse
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, permissions, status, filters, parsers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from datetime import datetime, timedelta
-from django.utils import timezone
-from django.http import HttpResponse
 
 from .models import (
     User, Patient, Specialty, Doctor, Appointment,
     MedicalRecord, RecordService, Medicine, MedicineBatch,
     Prescription, PrescriptionDetail, Invoice, MedicalService
 )
+from .payos_provider import PayOSProvider
 from .serializers import (
     UserSerializer, PatientSerializer, SpecialtySerializer, DoctorSerializer,
     AppointmentSerializer, MedicalRecordSerializer, RecordServiceSerializer,
@@ -23,7 +25,6 @@ from .serializers import (
     PrescriptionDetailSerializer, InvoiceSerializer,
     ServiceSerializer, PrescriptionSerializer
 )
-from .payos_provider import PayOSProvider
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -45,6 +46,45 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             s.is_valid(raise_exception=True)
             u = s.save()
         return Response(UserSerializer(u).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='create-doctor', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def create_doctor(self, request):
+        if request.user.role != 'ADMIN':
+            return Response({"detail": "Quyền truy cập bị từ chối!"}, status=status.HTTP_403_FORBIDDEN)
+
+        username = request.data.get('username')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        email = request.data.get('email', '')
+        specialty_id = request.data.get('specialty_id')
+        phone = request.data.get('phone', '')
+
+        if not username or not password or not specialty_id:
+            return Response({"detail": "Thiếu các thông tin bắt buộc!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({"detail": "Tên đăng nhập này đã có người sử dụng!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            role='DOCTOR'
+        )
+
+        Doctor.objects.create(
+            user=user,
+            full_name=f"{last_name} {first_name}".strip(),
+            specialty_id=specialty_id,
+            phone=phone
+        )
+
+        return Response({"detail": "Đã tạo tài khoản và phân bổ phòng khoa cho bác sĩ mới thành công!"},
+                        status=status.HTTP_201_CREATED)
 
 
 class PatientViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.UpdateAPIView):
@@ -241,6 +281,19 @@ class AppointmentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Create
         appointment.save()
 
         return Response({"detail": "Lập hồ sơ khám bệnh và kê đơn thành công!"}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='cancel')
+    def cancel_appointment(self, request, pk=None):
+        appointment = self.get_object()
+        if appointment.status not in ['PENDING', 'CONFIRMED']:
+            return Response({"detail": "Không thể hủy lịch hẹn ở trạng thái này!"}, status=status.HTTP_400_BAD_REQUEST)
+        reason = request.data.get('reason')
+        if not reason:
+            return Response({"detail": "Vui lòng cung cấp lý do hủy lịch!"}, status=status.HTTP_400_BAD_REQUEST)
+        appointment.status = 'CANCELLED'
+        appointment.cancel_reason = reason
+        appointment.save()
+        return Response({"detail": "Đã hủy lịch hẹn thành công!"}, status=status.HTTP_200_OK)
 
 
 class ServiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):

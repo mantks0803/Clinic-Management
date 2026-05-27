@@ -58,7 +58,6 @@ class Doctor(models.Model):
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='doctors', verbose_name="Chuyên khoa")
     full_name = models.CharField(max_length=150, verbose_name="Họ và tên")
     phone = models.CharField(max_length=15, blank=True, verbose_name="Số điện thoại")
-    #consultation_fee = models.DecimalField(max_digits=12, decimal_places=2, default=100000, verbose_name="Phí khám")
 
     class Meta:
         verbose_name = "Bác sĩ"
@@ -81,6 +80,7 @@ class Appointment(models.Model):
     time_slot = models.CharField(max_length=20, help_text="VD: 08:00-08:30", verbose_name="Khung giờ")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING', verbose_name="Trạng thái")
     reason = models.TextField(blank=True, null=True, verbose_name="Lý do khám")
+    cancel_reason = models.TextField(blank=True, null=True, verbose_name="Lý do hủy lịch")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
 
     class Meta:
@@ -96,7 +96,7 @@ class MedicalRecord(models.Model):
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='medical_record', verbose_name="Lịch hẹn")
     symptoms = models.TextField(blank=True, null=True, verbose_name="Triệu chứng")
     diagnosis = models.TextField(blank=True, null=True, verbose_name="Chẩn đoán")
-    notes = models.TextField(blank=True, null=True, verbose_name="Lời dặn dò")
+    notes = models.TextField(blank=True, null=True, verbose_name="Lời dặn dặn")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
 
     class Meta:
@@ -192,6 +192,7 @@ class PrescriptionDetail(models.Model):
 
     def __str__(self):
         return f"{self.prescription} - {self.batch.medicine.name} x {self.quantity}"
+
 
 class Invoice(models.Model):
     PAYMENT_CHOICES = (

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { TextInput, Button, Checkbox, Divider } from 'react-native-paper';
-import API, { endpoints, authApi } from '../../configs/API';
+import { endpoints, authApi } from '../../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import styles from '../../styles/DoctorStyles';
 
 const MedicalExamination = ({ route, navigation }) => {
     const { appointmentId, patientName } = route.params;
@@ -81,13 +82,7 @@ const MedicalExamination = ({ route, navigation }) => {
 
             await authApi(token).post(`${endpoints['appointments']}${appointmentId}/examine/`, payload);
             Alert.alert("Thành công", "Đã hoàn thành khám và kê đơn thuốc!", [
-                { 
-                    text: "OK", 
-                    onPress: () => {
-                        navigation.goBack();
-            
-                    } 
-                }
+                { text: "OK", onPress: () => navigation.goBack() }
             ]);
         } catch (ex) {
             Alert.alert("Thất bại", "Đã xảy ra lỗi hệ thống hoặc kho hết thuốc!");
@@ -99,7 +94,6 @@ const MedicalExamination = ({ route, navigation }) => {
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
             <Text style={styles.patientBanner}>Bệnh nhân: {patientName}</Text>
-
             <Text style={styles.sectionTitle}>1. Nội dung khám bệnh *</Text>
             <TextInput label="Chẩn đoán bệnh" value={diagnosis} onChangeText={setDiagnosis} mode="outlined" style={styles.input} />
             <TextInput label="Lời dặn bác sĩ" value={advice} onChangeText={setAdvice} multiline numberOfLines={3} mode="outlined" style={styles.input} />
@@ -133,12 +127,8 @@ const MedicalExamination = ({ route, navigation }) => {
                     </View>
                 </View>
             ))}
-
             <Divider style={{ marginVertical: 20 }} />
-
-            {loading ? (
-                <ActivityIndicator size="large" color="#2e7d32" />
-            ) : (
+            {loading ? <ActivityIndicator size="large" color="#2e7d32" /> : (
                 <Button mode="contained" onPress={handleSubmit} style={styles.submitBtn} buttonColor="#2e7d32">
                     HOÀN THÀNH KHÁM & KÊ ĐƠN
                 </Button>
@@ -146,23 +136,5 @@ const MedicalExamination = ({ route, navigation }) => {
         </ScrollView>
     );
 };
-
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    patientBanner: { fontSize: 16, fontWeight: 'bold', backgroundColor: '#e3f2fd', color: '#005b9f', padding: 12, borderRadius: 8, marginBottom: 15 },
-    sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#333', marginTop: 15, marginBottom: 8 },
-    input: { marginBottom: 10, backgroundColor: '#fff' },
-    checkboxRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
-    checkboxLabel: { fontSize: 14, color: '#495057' },
-    medicineListHorizontal: { flexDirection: 'row', marginBottom: 15, paddingVertical: 5 },
-    btnMedSelect: { marginRight: 8, borderColor: '#005b9f' },
-    medCard: { backgroundColor: '#f8f9fa', padding: 10, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#dee2e6' },
-    medCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    medName: { fontSize: 14, fontWeight: 'bold', color: '#212529' },
-    medCardBody: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
-    inputQty: { width: '20%', height: 45, backgroundColor: '#fff' },
-    inputInstruction: { width: '76%', height: 45, backgroundColor: '#fff' },
-    submitBtn: { padding: 4, borderRadius: 8, marginBottom: 40 }
-});
 
 export default MedicalExamination;

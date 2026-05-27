@@ -40,54 +40,45 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'password', 'first_name', 'last_name', 'email', 'role', 'avatar', 'patient', 'dob', 'gender', 'phone', 'address']
         extra_kwargs = {
-            'password': {'write_only': True},
-            'role': {'required': False}
+            'password': {
+                'write_only': True
+            }
         }
+
+    def create(self, validated_data):
+        dob = validated_data.pop('dob', None)
+        gender = validated_data.pop('gender', None)
+        phone = validated_data.pop('phone', None)
+        address = validated_data.pop('address', None)
+
+        user = User.objects.create_user(**validated_data)
+
+        if user.role == 'PATIENT':
+            Patient.objects.create(
+                user=user,
+                full_name=f"{user.last_name} {user.first_name}",
+                phone=phone or "",
+                dob=dob,
+                gender=gender or "MALE",
+                address=address or ""
+            )
+        return user
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.avatar:
-            data['avatar'] = instance.avatar.url
+            avatar_url = instance.avatar.url if hasattr(instance.avatar, 'url') else str(instance.avatar)
+            if not avatar_url.startswith('http'):
+                clean_path = avatar_url.lstrip('/')
+                if not clean_path.endswith('.jpg') and not clean_path.endswith('.png'):
+                    data['avatar'] = f"https://res.cloudinary.com/dmhnfoc9i/image/upload/{clean_path}.jpg"
+                else:
+                    data['avatar'] = f"https://res.cloudinary.com/dmhnfoc9i/image/upload/{clean_path}"
+            else:
+                data['avatar'] = avatar_url
+        else:
+            data['avatar'] = None
         return data
-
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        avatar = validated_data.pop('avatar', None)
-        role = validated_data.get('role', 'PATIENT')
-        dob = validated_data.pop('dob', None)
-        gender = validated_data.pop('gender', 'MALE')
-        phone = validated_data.pop('phone', '')
-        address = validated_data.pop('address', '')
-
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            password=password,
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-            email=validated_data.get('email', ''),
-            role=role
-        )
-
-        if avatar:
-            user.avatar = avatar
-            user.save()
-
-        if role == 'PATIENT':
-            full_name = f"{user.last_name} {user.first_name}".strip()
-            if not full_name:
-                full_name = user.username
-
-            Patient.objects.create(
-                user=user,
-                full_name=full_name,
-                dob=dob,
-                gender=gender,
-                phone=phone,
-                address=address
-            )
-
-        return user
-
 class DoctorSerializer(serializers.ModelSerializer):
     specialty_name = serializers.ReadOnlyField(source='specialty.name')
     consultation_fee = serializers.SerializerMethodField()
