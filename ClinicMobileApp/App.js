@@ -17,6 +17,7 @@ import AdminRecordList from './screens/Admin/AdminRecordList';
 import AdminAppointmentList from './screens/Admin/AdminAppointmentList';
 import MedicalExamination from './screens/Doctor/MedicalExamination';
 import CreateDoctor from './screens/Admin/CreateDoctor';
+import ChatRoom from './screens/ChatRoom';
 
 const Stack = createStackNavigator();
 
@@ -73,6 +74,11 @@ const Root = () => {
                             name="CreateDoctor" 
                             component={CreateDoctor} 
                             options={{ headerShown: true, title: "Cấp tài khoản & Phân khoa", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
+                        />
+                        <Stack.Screen 
+                            name="ChatRoom" 
+                            component={ChatRoom} 
+                            options={{ headerShown: true, title: "Tư vấn sức khỏe trực tuyến", headerTintColor: '#fff', headerStyle: { backgroundColor: '#005b9f' } }} 
                         />
                     </>
                 )}
