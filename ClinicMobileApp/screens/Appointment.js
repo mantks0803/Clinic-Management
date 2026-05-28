@@ -100,14 +100,6 @@ const Appointment = ({ navigation }) => {
         return { label: 'Chờ duyệt', color: '#f57c00', bg: '#fff3e0' };
     };
 
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#005b9f" />
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
             <FlatList
@@ -116,6 +108,7 @@ const Appointment = ({ navigation }) => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 renderItem={({ item }) => {
                     const chip = getStatusChip(item.status);
+                    const counterpartName = user?.role === 'DOCTOR' ? item.patient_name : item.doctor_name;
                     return (
                         <Card style={styles.card}>
                             <Card.Content>
@@ -141,16 +134,29 @@ const Appointment = ({ navigation }) => {
                                         </View>
                                     )}
 
-                                    {user && user.role === 'DOCTOR' && item.status === 'CONFIRMED' && (
-                                        <Button 
-                                            mode="contained" 
-                                            buttonColor="#005b9f" 
-                                            icon="medical-bag"
-                                            onPress={() => navigation.navigate('MedicalExamination', { appointmentId: item.id, patientName: item.patient_name })}
-                                            style={styles.fullBtn}
-                                        >
-                                            BẮT ĐẦU KHÁM BỆNH
-                                        </Button>
+                                    {item.status === 'CONFIRMED' && (
+                                        <View style={{ gap: 8 }}>
+                                            <Button 
+                                                mode="contained" 
+                                                buttonColor="#00796b" 
+                                                icon="chat-processing-outline"
+                                                onPress={() => navigation.navigate('ChatRoom', { appointmentId: item.id, receiverName: counterpartName })}
+                                                style={styles.fullBtn}
+                                            >
+                                                VÀO PHÒNG CHAT TƯ VẤN
+                                            </Button>
+                                            {user && user.role === 'DOCTOR' && (
+                                                <Button 
+                                                    mode="contained" 
+                                                    buttonColor="#005b9f" 
+                                                    icon="medical-bag"
+                                                    onPress={() => navigation.navigate('MedicalExamination', { appointmentId: item.id, patientName: item.patient_name })}
+                                                    style={styles.fullBtn}
+                                                >
+                                                    BẮT ĐẦU KHÁM BỆNH
+                                                </Button>
+                                            )}
+                                        </View>
                                     )}
 
                                     {user && user.role === 'PATIENT' && (item.status === 'PENDING' || item.status === 'CONFIRMED') && (
