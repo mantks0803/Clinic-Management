@@ -7,7 +7,7 @@ import MyStyles from '../../styles/MyStyles';
 
 const CreateNewMedicine = ({ navigation }) => {
     const [name, setName] = useState('');
-    const [unit, setUnit] = useState('Viên'); //default là viên
+    const [unit, setUnit] = useState('Viên');
     const [description, setDescription] = useState('');
     const [usageInstruction, setUsageInstruction] = useState('');
     const [loading, setLoading] = useState(false);

@@ -38,7 +38,7 @@ const Home = () => {
                             title={item.full_name}
                             description={item.specialty?.name || "Chưa cập nhật chuyên khoa"}
                             left={() => <List.Icon icon="doctor" />}
-                            onPress={() => console.log("Bấm vào bác sĩ:", item.id)} // Tạm thời để log, mai mình làm link qua trang đặt lịch
+                            onPress={() => console.log("Bấm vào bác sĩ:", item.id)}
                         />
                     )}
                 />
