@@ -48,7 +48,6 @@ const ChatRoom = ({ route }) => {
             });
         } catch (ex) {
             console.error(ex);
-            // Bồi thêm dòng Alert này để check lỗi trên điện thoại:
             Alert.alert("Lỗi kết nối Firebase", ex.message || "Không thể gửi tin nhắn!");
         }
     };
